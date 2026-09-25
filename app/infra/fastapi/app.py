@@ -26,6 +26,7 @@ def create_api(
     database: Sqlite,
     database_migrate: bool = True,
     lifespan_hooks: list[Callable[[], AsyncGenerator[None]]] | None = None,
+    sync_service: Any | None = None,
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
@@ -41,6 +42,7 @@ def create_api(
             migrate_database(database.database_url, enabled=database_migrate)
 
         app.state.database = database
+        app.state.sync_service = sync_service
 
         if lifespan_hooks:
             for hook in lifespan_hooks:

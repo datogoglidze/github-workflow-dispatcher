@@ -3,11 +3,15 @@ from __future__ import annotations
 from typing import Protocol
 
 from app.core.repositories.ports import RepositoriesRepository
+from app.core.workflows.ports import WorkflowsRepository
 
 
 class UnitOfWork(Protocol):
     @property
     def repositories(self) -> RepositoriesRepository: ...
+
+    @property
+    def workflows(self) -> WorkflowsRepository: ...
 
     def commit(self) -> None: ...
 

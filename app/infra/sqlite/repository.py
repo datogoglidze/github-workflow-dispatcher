@@ -3,13 +3,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Generic, TypeVar
 
-from sqlalchemy import func, select
+from sqlalchemy import Boolean, asc, desc, func, inspect, select
 from sqlalchemy.orm import Session
 
 from app.infra.sqlite import Base
 
 ModelT = TypeVar("ModelT", bound=Base)
 EntityT = TypeVar("EntityT")
+
+_BOOL_TRUE = {"true", "1", "yes"}
+_BOOL_FALSE = {"false", "0", "no"}
 
 
 @dataclass
@@ -28,14 +31,93 @@ class BaseSqliteRepository(Generic[ModelT, EntityT]):  # noqa: UP046
         raise NotImplementedError
 
     # ------------------------------------------------------------------
-    # Filter helper — exact equality on columns only
-    # Step 3 replaces this with a full query engine.
+    # Query engine
     # ------------------------------------------------------------------
 
+    def _resolve_column(self, field: str) -> Any:
+        """Return (column, join_model_or_None) for a field name or dot-path."""
+        if "." not in field:
+            mapper = inspect(self.model)
+            if field not in {c.key for c in mapper.columns}:
+                raise ValueError(f"Unknown filter field: '{field}'")
+            return getattr(self.model, field), None
+
+        parts = field.split(".", 1)
+        rel_name, rel_field = parts[0], parts[1]
+        mapper = inspect(self.model)
+        rel_prop = mapper.relationships.get(rel_name)
+        if rel_prop is None or not rel_prop.info.get("filterable"):
+            raise ValueError(f"Unknown or non-filterable relationship: '{rel_name}'")
+        related_model = rel_prop.mapper.class_
+        rel_mapper = inspect(related_model)
+        if rel_field not in {c.key for c in rel_mapper.columns}:
+            raise ValueError(f"Unknown field '{rel_field}' on '{rel_name}'")
+        return getattr(related_model, rel_field), related_model
+
+    def _coerce_value(self, column: Any, value: Any) -> Any:
+        """Coerce string 'true'/'false' to bool when the column is Boolean."""
+        try:
+            col_type = column.property.columns[0].type
+        except Exception:
+            return value
+        if isinstance(col_type, Boolean) and isinstance(value, str):
+            if value.lower() in _BOOL_TRUE:
+                return True
+            if value.lower() in _BOOL_FALSE:
+                return False
+        return value
+
     def _apply_filters(self, stmt: Any, **filters: Any) -> Any:
+        """Apply filters with optional operator suffix (field__op)."""
+        joins: set[Any] = set()
         for key, value in filters.items():
-            column = getattr(self.model, key)
-            stmt = stmt.where(column == value)
+            if "__" in key:
+                field, op = key.rsplit("__", 1)
+            else:
+                field, op = key, "eq"
+
+            column, join_model = self._resolve_column(field)
+
+            if join_model is not None and join_model not in joins:
+                stmt = stmt.join(join_model, isouter=True)
+                joins.add(join_model)
+
+            value = self._coerce_value(column, value)
+
+            if op == "eq":
+                stmt = stmt.where(column == value)
+            elif op == "ne":
+                stmt = stmt.where(column != value)
+            elif op == "ilike":
+                stmt = stmt.where(column.ilike(value))
+            elif op == "in":
+                vals = value if isinstance(value, list) else [value]
+                stmt = stmt.where(column.in_(vals))
+            elif op == "lt":
+                stmt = stmt.where(column < value)
+            elif op == "gt":
+                stmt = stmt.where(column > value)
+            elif op == "has":
+                # dot-path relationship filter via .has()
+                rel_attr = getattr(self.model, field.split(".")[0])
+                rel_col_name = field.split(".")[1]
+                related_model = rel_attr.property.mapper.class_
+                rel_column = getattr(related_model, rel_col_name)
+                stmt = stmt.where(rel_attr.has(rel_column == value))
+            else:
+                raise ValueError(f"Unknown filter operator: '{op}'")
+        return stmt
+
+    def _apply_sort(self, stmt: Any, sort_by: list[str]) -> Any:
+        joins: set[Any] = set()
+        for sort_key in sort_by:
+            descending = sort_key.startswith("-")
+            field = sort_key.lstrip("-")
+            column, join_model = self._resolve_column(field)
+            if join_model is not None and join_model not in joins:
+                stmt = stmt.join(join_model, isouter=True)
+                joins.add(join_model)
+            stmt = stmt.order_by(desc(column) if descending else asc(column))
         return stmt
 
     # ------------------------------------------------------------------
@@ -46,10 +128,13 @@ class BaseSqliteRepository(Generic[ModelT, EntityT]):  # noqa: UP046
         self,
         limit: int | None = None,
         offset: int | None = None,
+        sort_by: list[str] | None = None,
         **filters: Any,
     ) -> list[EntityT]:
         stmt = select(self.model)
         stmt = self._apply_filters(stmt, **filters)
+        if sort_by:
+            stmt = self._apply_sort(stmt, sort_by)
         if offset is not None:
             stmt = stmt.offset(offset)
         if limit is not None:

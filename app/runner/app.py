@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from app.infra.fastapi.health.router import router as health_router
 from app.infra.fastapi.repositories.router import router as repositories_router
 from app.infra.fastapi.root.router import router as root_router
+from app.infra.fastapi.workflows.router import router as workflows_router
 from app.runner.container import AppContainer
 from app.runner.fastapi import SchedulerApi
 from app.runner.settings import Settings
@@ -24,9 +25,10 @@ def create_app(
         container = AppContainer.build(settings)
 
     return (
-        SchedulerApi(settings, container.database)
+        SchedulerApi(settings, container.database, sync_service=container.sync_service)
         .with_router(root_router)
         .with_router(health_router)
         .with_router(repositories_router)
+        .with_router(workflows_router)
         .build()
     )

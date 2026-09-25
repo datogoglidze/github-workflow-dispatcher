@@ -6,7 +6,9 @@ from types import TracebackType
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.repositories.ports import RepositoriesRepository
+from app.core.workflows.ports import WorkflowsRepository
 from app.infra.sqlite.repositories import RepositoriesSqliteRepository
+from app.infra.sqlite.workflow_repositories import WorkflowsSqliteRepository
 
 _logger = logging.getLogger(__name__)
 
@@ -16,12 +18,19 @@ class SqliteUnitOfWork:
         self._session_factory = session_factory
         self._session: Session | None = None
         self._repositories: RepositoriesSqliteRepository | None = None
+        self._workflows: WorkflowsSqliteRepository | None = None
 
     @property
     def repositories(self) -> RepositoriesRepository:
         if self._repositories is None:
             raise RuntimeError("UnitOfWork is not active — use it as a context manager")
         return self._repositories
+
+    @property
+    def workflows(self) -> WorkflowsRepository:
+        if self._workflows is None:
+            raise RuntimeError("UnitOfWork is not active — use it as a context manager")
+        return self._workflows
 
     def commit(self) -> None:
         if self._session is not None:
@@ -36,6 +45,7 @@ class SqliteUnitOfWork:
             raise RuntimeError("UnitOfWork is already active")
         self._session = self._session_factory()
         self._repositories = RepositoriesSqliteRepository(self._session)
+        self._workflows = WorkflowsSqliteRepository(self._session)
         return self
 
     def __exit__(
@@ -47,6 +57,7 @@ class SqliteUnitOfWork:
         session = self._session
         self._session = None
         self._repositories = None
+        self._workflows = None
 
         if session is None:
             return
