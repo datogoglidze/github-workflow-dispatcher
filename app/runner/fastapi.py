@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import uvicorn
 from fastapi import FastAPI
 from fastapi.routing import APIRouter
@@ -12,9 +14,12 @@ from app.runner.settings import Settings
 class SchedulerApi:
     """Builder for the FastAPI application."""
 
-    def __init__(self, settings: Settings, database: Sqlite) -> None:
+    def __init__(
+        self, settings: Settings, database: Sqlite, sync_service: Any = None
+    ) -> None:
         self._settings = settings
         self._database = database
+        self._sync_service = sync_service
         self._routers: list[APIRouter] = []
         self._origins: list[str] = list(settings.cors_origins)
 
@@ -34,6 +39,7 @@ class SchedulerApi:
             cors_origins=self._origins,
             database=self._database,
             database_migrate=self._settings.database_migrate,
+            sync_service=self._sync_service,
         )
 
 

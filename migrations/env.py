@@ -7,6 +7,7 @@ from sqlalchemy import engine_from_config, pool
 
 from app.infra.sqlite import Base
 import app.infra.sqlite.models  # noqa: F401 — registers all models with Base.metadata
+import app.infra.sqlite.workflow_repositories  # noqa: F401
 
 config = context.config
 
