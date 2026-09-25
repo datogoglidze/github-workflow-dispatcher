@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
-from app.core.logs.ports import DispatchLogsRepository
-from app.core.repositories.ports import RepositoriesRepository
-from app.core.workflows.ports import WorkflowsRepository
+if TYPE_CHECKING:
+    from app.core.logs.ports import DispatchLogsRepository
+    from app.core.repositories.ports import RepositoriesRepository
+    from app.core.workflows.ports import WorkflowsRepository
 
 
 class UnitOfWork(Protocol):
