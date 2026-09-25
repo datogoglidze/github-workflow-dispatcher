@@ -27,6 +27,7 @@ def create_api(
     database_migrate: bool = True,
     lifespan_hooks: list[Callable[[], AsyncGenerator[None]]] | None = None,
     sync_service: Any | None = None,
+    dispatcher_service: Any | None = None,
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
@@ -43,6 +44,7 @@ def create_api(
 
         app.state.database = database
         app.state.sync_service = sync_service
+        app.state.dispatcher_service = dispatcher_service
 
         if lifespan_hooks:
             for hook in lifespan_hooks:

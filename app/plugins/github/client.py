@@ -31,6 +31,28 @@ class _TokenCache:
 
 
 @dataclass
+class WorkflowDispatchResult:
+    status_code: int
+    body: str
+    run_url: str | None = None
+
+
+def _stringify_inputs(inputs: dict[str, Any] | None) -> dict[str, str]:
+    """GitHub workflow inputs are strings. Drop nulls; booleans are true/false."""
+    if not inputs:
+        return {}
+    converted: dict[str, str] = {}
+    for key, value in inputs.items():
+        if value is None:
+            continue
+        if isinstance(value, bool):
+            converted[key] = "true" if value else "false"
+        else:
+            converted[key] = str(value)
+    return converted
+
+
+@dataclass
 class GitHubClient:
     app_id: str
     private_key: str
@@ -187,3 +209,39 @@ class GitHubClient:
         except Exception:
             content = None
         return content, sha
+
+    async def dispatch_workflow(
+        self,
+        owner: str,
+        repo: str,
+        workflow_id: int | str,
+        ref: str,
+        inputs: dict[str, Any] | None = None,
+    ) -> WorkflowDispatchResult:
+        if not ref or not ref.strip():
+            raise ValueError("ref is empty")
+
+        resp = await self._request(
+            "POST",
+            f"{_GITHUB_API}/repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches",
+            json={
+                "ref": ref,
+                "inputs": _stringify_inputs(inputs),
+                "return_run_details": True,
+            },
+        )
+        run_url: str | None = None
+        if resp.status_code == 200:
+            try:
+                data = resp.json()
+            except Exception:
+                data = None
+            if isinstance(data, dict):
+                html_url = data.get("html_url")
+                if isinstance(html_url, str):
+                    run_url = html_url
+        return WorkflowDispatchResult(
+            status_code=resp.status_code,
+            body=resp.text,
+            run_url=run_url,
+        )
