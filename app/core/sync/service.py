@@ -25,6 +25,7 @@ class SyncResult:
 class SyncService:
     uow_factory: Callable[[], Any]
     github_client: GitHubClient
+    on_schedule_disabled: Callable[[str], None] | None = None
 
     async def sync_all(self) -> SyncResult:
         # ----------------------------------------------------------------
@@ -66,6 +67,7 @@ class SyncService:
         repos_synced = 0
         wfs_synced = 0
         wfs_deleted = 0
+        disabled_schedule_ids: list[str] = []
 
         with self.uow_factory() as uow:
             # --- Upsert repositories ---
@@ -204,6 +206,18 @@ class SyncService:
                     )
                     uow.workflows.update_one(existing_wf.id, deleted_wf)
                     wfs_deleted += 1
+                    enabled_schedules = uow.schedules.read_many(
+                        limit=None,
+                        workflow_id=existing_wf.id,
+                        is_enabled=True,
+                    )
+                    for schedule in enabled_schedules:
+                        uow.schedules.update_one(schedule.id, schedule.disabled())
+                        disabled_schedule_ids.append(schedule.id)
+
+        if self.on_schedule_disabled is not None:
+            for schedule_id in disabled_schedule_ids:
+                self.on_schedule_disabled(schedule_id)
 
         return SyncResult(
             repositories_synced=repos_synced,

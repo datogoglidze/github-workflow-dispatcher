@@ -28,6 +28,8 @@ def create_api(
     lifespan_hooks: list[Callable[[], AsyncGenerator[None]]] | None = None,
     sync_service: Any | None = None,
     dispatcher_service: Any | None = None,
+    scheduler_service: Any | None = None,
+    rate_limiter: Any | None = None,
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
@@ -45,6 +47,11 @@ def create_api(
         app.state.database = database
         app.state.sync_service = sync_service
         app.state.dispatcher_service = dispatcher_service
+        app.state.scheduler_service = scheduler_service
+        app.state.rate_limiter = rate_limiter
+
+        if scheduler_service is not None:
+            scheduler_service.start()
 
         if lifespan_hooks:
             for hook in lifespan_hooks:
@@ -53,6 +60,8 @@ def create_api(
 
         yield
 
+        if scheduler_service is not None:
+            scheduler_service.shutdown()
         _logger.info("Stopped github-workflow-dispatcher API")
         database.dispose()
 

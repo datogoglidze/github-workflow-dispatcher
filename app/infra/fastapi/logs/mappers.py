@@ -2,9 +2,13 @@ from __future__ import annotations
 
 from app.core.logs.entities import DispatchLog
 from app.infra.fastapi.logs.schemas import DispatchLogResponse, DispatchTargetResponse
+from app.infra.fastapi.schedules.schemas import ScheduleResponse
 
 
-def map_dispatch_log(log: DispatchLog) -> DispatchLogResponse:
+def map_dispatch_log(
+    log: DispatchLog,
+    schedule: ScheduleResponse | None = None,
+) -> DispatchLogResponse:
     target = None
     if log.target is not None:
         snapshot = log.target
@@ -22,7 +26,8 @@ def map_dispatch_log(log: DispatchLog) -> DispatchLogResponse:
         )
     return DispatchLogResponse(
         id=log.id,
-        schedule=None,
+        schedule_id=log.schedule_id,
+        schedule=schedule,
         target=target,
         triggered_at=log.triggered_at,
         status_code=log.status_code,

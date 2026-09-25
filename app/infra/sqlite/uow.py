@@ -7,9 +7,11 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.logs.ports import DispatchLogsRepository
 from app.core.repositories.ports import RepositoriesRepository
+from app.core.schedules.ports import SchedulesRepository
 from app.core.workflows.ports import WorkflowsRepository
 from app.infra.sqlite.log_repositories import DispatchLogsSqliteRepository
 from app.infra.sqlite.repositories import RepositoriesSqliteRepository
+from app.infra.sqlite.schedule_repositories import SchedulesSqliteRepository
 from app.infra.sqlite.workflow_repositories import WorkflowsSqliteRepository
 
 _logger = logging.getLogger(__name__)
@@ -21,6 +23,7 @@ class SqliteUnitOfWork:
         self._session: Session | None = None
         self._repositories: RepositoriesSqliteRepository | None = None
         self._workflows: WorkflowsSqliteRepository | None = None
+        self._schedules: SchedulesSqliteRepository | None = None
         self._logs: DispatchLogsSqliteRepository | None = None
 
     @property
@@ -34,6 +37,12 @@ class SqliteUnitOfWork:
         if self._workflows is None:
             raise RuntimeError("UnitOfWork is not active — use it as a context manager")
         return self._workflows
+
+    @property
+    def schedules(self) -> SchedulesRepository:
+        if self._schedules is None:
+            raise RuntimeError("UnitOfWork is not active — use it as a context manager")
+        return self._schedules
 
     @property
     def logs(self) -> DispatchLogsRepository:
@@ -55,6 +64,7 @@ class SqliteUnitOfWork:
         self._session = self._session_factory()
         self._repositories = RepositoriesSqliteRepository(self._session)
         self._workflows = WorkflowsSqliteRepository(self._session)
+        self._schedules = SchedulesSqliteRepository(self._session)
         self._logs = DispatchLogsSqliteRepository(self._session)
         return self
 
@@ -68,6 +78,7 @@ class SqliteUnitOfWork:
         self._session = None
         self._repositories = None
         self._workflows = None
+        self._schedules = None
         self._logs = None
 
         if session is None:

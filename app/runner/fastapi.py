@@ -20,11 +20,15 @@ class SchedulerApi:
         database: Sqlite,
         sync_service: Any = None,
         dispatcher_service: Any = None,
+        scheduler_service: Any = None,
+        rate_limiter: Any = None,
     ) -> None:
         self._settings = settings
         self._database = database
         self._sync_service = sync_service
         self._dispatcher_service = dispatcher_service
+        self._scheduler_service = scheduler_service
+        self._rate_limiter = rate_limiter
         self._routers: list[APIRouter] = []
         self._origins: list[str] = list(settings.cors_origins)
 
@@ -46,6 +50,8 @@ class SchedulerApi:
             database_migrate=self._settings.database_migrate,
             sync_service=self._sync_service,
             dispatcher_service=self._dispatcher_service,
+            scheduler_service=self._scheduler_service,
+            rate_limiter=self._rate_limiter,
         )
 
 

@@ -5,6 +5,8 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from app.infra.fastapi.schedules.schemas import ScheduleResponse
+
 
 class DispatchTargetResponse(BaseModel):
     repository_full_name: str
@@ -21,7 +23,8 @@ class DispatchTargetResponse(BaseModel):
 
 class DispatchLogResponse(BaseModel):
     id: str
-    schedule: None = None
+    schedule_id: str | None = None
+    schedule: ScheduleResponse | None = None
     target: DispatchTargetResponse | None = None
     triggered_at: datetime
     status_code: int | None = None

@@ -7,6 +7,7 @@ from fastapi import Depends, Request
 from app.core.dispatcher.service import DispatcherService
 from app.core.logs.service import DispatchLogsService
 from app.core.repositories.service import RepositoriesService
+from app.core.schedules.service import SchedulesService
 from app.core.sync.service import SyncService
 from app.core.workflows.service import WorkflowsService
 
@@ -33,6 +34,12 @@ def get_dispatcher_service(request: Request) -> DispatcherService:
     return request.app.state.dispatcher_service
 
 
+def get_schedules_service(request: Request) -> SchedulesService:
+    """Provide a SchedulesService backed by the request's database."""
+    database = request.app.state.database
+    return SchedulesService(uow=database.uow())
+
+
 def get_logs_service(request: Request) -> DispatchLogsService:
     """Provide a DispatchLogsService backed by the request's database."""
     database = request.app.state.database
@@ -54,3 +61,5 @@ DispatcherServiceDependency = Annotated[
 DispatchLogsServiceDependency = Annotated[
     DispatchLogsService, Depends(get_logs_service)
 ]
+
+SchedulesServiceDependency = Annotated[SchedulesService, Depends(get_schedules_service)]
