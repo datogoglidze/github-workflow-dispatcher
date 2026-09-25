@@ -48,6 +48,14 @@ class GitHubNotConfiguredError(Exception):
 
 
 @dataclass
+class InvalidCronExpressionError(Exception):
+    expression: str
+
+    def __str__(self) -> str:
+        return f"Invalid cron expression: '{self.expression}'"
+
+
+@dataclass
 class WorkflowNotDispatchableError(Exception):
     workflow_id: str
     name: str

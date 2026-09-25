@@ -7,6 +7,7 @@ from app.core.errors import (
     DoesNotExistError,
     GitHubApiError,
     GitHubNotConfiguredError,
+    InvalidCronExpressionError,
     RateLimitExceededError,
     WorkflowNotDispatchableError,
 )
@@ -54,6 +55,12 @@ def setup_exception_handlers(app: FastAPI) -> None:
         _request: Request, exc: GitHubNotConfiguredError
     ) -> ErrorResponse:
         return ErrorResponse(status_code=503, message=str(exc))
+
+    @app.exception_handler(InvalidCronExpressionError)
+    async def invalid_cron_handler(
+        _request: Request, exc: InvalidCronExpressionError
+    ) -> ResourceValidationError:
+        return ResourceValidationError(message=str(exc))
 
     @app.exception_handler(WorkflowNotDispatchableError)
     async def workflow_not_dispatchable_handler(

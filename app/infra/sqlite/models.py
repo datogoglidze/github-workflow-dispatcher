@@ -93,3 +93,31 @@ class DispatchLogModel(Base):
         Index("ix_dispatch_logs_schedule_id", "schedule_id"),
         Index("ix_dispatch_logs_triggered_at", "triggered_at"),
     )
+
+
+class ScheduleModel(Base):
+    __tablename__ = "schedules"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    workflow_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("workflows.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    cron_expression: Mapped[str] = mapped_column(String(255), nullable=False)
+    ref: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    inputs: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    is_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    last_run_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    next_run_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+
+    workflow: Mapped[WorkflowModel] = relationship(
+        "WorkflowModel",
+        lazy="select",
+        info={"filterable": True},
+    )
+
+    __table_args__ = (
+        Index("ix_schedules_workflow_id", "workflow_id"),
+        Index("ix_schedules_next_run_at", "next_run_at"),
+    )

@@ -26,6 +26,14 @@ class TokenBucketRateLimiter:
         self._last_refill = now
 
     @property
+    def rate_per_second(self) -> float:
+        return self._rate
+
+    @property
+    def capacity(self) -> float:
+        return self._capacity
+
+    @property
     def current_tokens(self) -> float:
         return self._tokens
 

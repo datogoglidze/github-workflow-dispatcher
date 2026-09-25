@@ -34,25 +34,38 @@ class BaseSqliteRepository(Generic[ModelT, EntityT]):  # noqa: UP046
     # Query engine
     # ------------------------------------------------------------------
 
-    def _resolve_column(self, field: str) -> Any:
-        """Return (column, join_model_or_None) for a field name or dot-path."""
+    def _resolve_column(self, field: str) -> tuple[Any, list[Any]]:
+        """Return (column, join models in order) for a field name or dot-path."""
         if "." not in field:
             mapper = inspect(self.model)
             if field not in {c.key for c in mapper.columns}:
                 raise ValueError(f"Unknown filter field: '{field}'")
-            return getattr(self.model, field), None
+            return getattr(self.model, field), []
 
-        parts = field.split(".", 1)
-        rel_name, rel_field = parts[0], parts[1]
-        mapper = inspect(self.model)
-        rel_prop = mapper.relationships.get(rel_name)
-        if rel_prop is None or not rel_prop.info.get("filterable"):
-            raise ValueError(f"Unknown or non-filterable relationship: '{rel_name}'")
-        related_model = rel_prop.mapper.class_
-        rel_mapper = inspect(related_model)
-        if rel_field not in {c.key for c in rel_mapper.columns}:
-            raise ValueError(f"Unknown field '{rel_field}' on '{rel_name}'")
-        return getattr(related_model, rel_field), related_model
+        current_model = self.model
+        join_models: list[Any] = []
+        parts = field.split(".")
+        for index, part in enumerate(parts):
+            mapper = inspect(current_model)
+            is_last = index == len(parts) - 1
+            if is_last:
+                if part not in {c.key for c in mapper.columns}:
+                    parent = parts[index - 1]
+                    raise ValueError(f"Unknown field '{part}' on '{parent}'")
+                return getattr(current_model, part), join_models
+            rel_prop = mapper.relationships.get(part)
+            if rel_prop is None or not rel_prop.info.get("filterable"):
+                raise ValueError(f"Unknown or non-filterable relationship: '{part}'")
+            current_model = rel_prop.mapper.class_
+            join_models.append(current_model)
+        raise ValueError(f"Unknown filter field: '{field}'")
+
+    def _join_related(self, stmt: Any, models: list[Any], joins: set[Any]) -> Any:
+        for model in models:
+            if model not in joins:
+                stmt = stmt.join(model, isouter=True)
+                joins.add(model)
+        return stmt
 
     def _coerce_value(self, column: Any, value: Any) -> Any:
         """Coerce string 'true'/'false' to bool when the column is Boolean."""
@@ -67,20 +80,20 @@ class BaseSqliteRepository(Generic[ModelT, EntityT]):  # noqa: UP046
                 return False
         return value
 
-    def _apply_filters(self, stmt: Any, **filters: Any) -> Any:
+    def _apply_filters(
+        self, stmt: Any, joins: set[Any] | None = None, **filters: Any
+    ) -> Any:
         """Apply filters with optional operator suffix (field__op)."""
-        joins: set[Any] = set()
+        if joins is None:
+            joins = set()
         for key, value in filters.items():
             if "__" in key:
                 field, op = key.rsplit("__", 1)
             else:
                 field, op = key, "eq"
 
-            column, join_model = self._resolve_column(field)
-
-            if join_model is not None and join_model not in joins:
-                stmt = stmt.join(join_model, isouter=True)
-                joins.add(join_model)
+            column, join_models = self._resolve_column(field)
+            stmt = self._join_related(stmt, join_models, joins)
 
             value = self._coerce_value(column, value)
 
@@ -108,15 +121,16 @@ class BaseSqliteRepository(Generic[ModelT, EntityT]):  # noqa: UP046
                 raise ValueError(f"Unknown filter operator: '{op}'")
         return stmt
 
-    def _apply_sort(self, stmt: Any, sort_by: list[str]) -> Any:
-        joins: set[Any] = set()
+    def _apply_sort(
+        self, stmt: Any, sort_by: list[str], joins: set[Any] | None = None
+    ) -> Any:
+        if joins is None:
+            joins = set()
         for sort_key in sort_by:
             descending = sort_key.startswith("-")
             field = sort_key.lstrip("-")
-            column, join_model = self._resolve_column(field)
-            if join_model is not None and join_model not in joins:
-                stmt = stmt.join(join_model, isouter=True)
-                joins.add(join_model)
+            column, join_models = self._resolve_column(field)
+            stmt = self._join_related(stmt, join_models, joins)
             stmt = stmt.order_by(desc(column) if descending else asc(column))
         return stmt
 
@@ -132,9 +146,10 @@ class BaseSqliteRepository(Generic[ModelT, EntityT]):  # noqa: UP046
         **filters: Any,
     ) -> list[EntityT]:
         stmt = select(self.model)
-        stmt = self._apply_filters(stmt, **filters)
+        joins: set[Any] = set()
+        stmt = self._apply_filters(stmt, joins, **filters)
         if sort_by:
-            stmt = self._apply_sort(stmt, sort_by)
+            stmt = self._apply_sort(stmt, sort_by, joins)
         if offset is not None:
             stmt = stmt.offset(offset)
         if limit is not None:

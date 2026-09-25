@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Protocol
 if TYPE_CHECKING:
     from app.core.logs.ports import DispatchLogsRepository
     from app.core.repositories.ports import RepositoriesRepository
+    from app.core.schedules.ports import SchedulesRepository
     from app.core.workflows.ports import WorkflowsRepository
 
 
@@ -14,6 +15,9 @@ class UnitOfWork(Protocol):
 
     @property
     def workflows(self) -> WorkflowsRepository: ...
+
+    @property
+    def schedules(self) -> SchedulesRepository: ...
 
     @property
     def logs(self) -> DispatchLogsRepository: ...

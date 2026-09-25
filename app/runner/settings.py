@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     rate_limit_per_second: float = 3.0
     rate_limit_burst: int = 5
 
+    # Scheduler
+    jitter_min_seconds: float = 1.0
+    jitter_max_seconds: float = 15.0
+    sync_interval_hours: int = 6
+
     @cached_property
     def cors_origins(self) -> list[str]:
         return [o.strip() for o in self.frontend_origins.split(",") if o.strip()]
