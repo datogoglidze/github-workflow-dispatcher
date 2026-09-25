@@ -55,9 +55,11 @@ function initialRepositoryFilter(params: URLSearchParams) {
 
 export function WorkflowsPage() {
   const [searchParams] = useSearchParams()
-  const [initialFilters] = useState(() => {
+  const [initialFilters] = useState<Record<string, string>>(() => {
     const repository = initialRepositoryFilter(searchParams)
-    return repository ? { "repository.full_name": repository } : {}
+    const filters: Record<string, string> = {}
+    if (repository) filters["repository.full_name"] = repository
+    return filters
   })
   const { refreshKey } = useAppOutlet()
   const columnFilters = useColumnFilters(filterColumns, initialFilters)
