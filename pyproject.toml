@@ -1,0 +1,68 @@
+[project]
+name = "github-workflow-dispatcher"
+version = "0.1.0"
+description = "GitHub Workflow Dispatcher and Scheduler"
+requires-python = ">=3.13,<4"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "pydantic>=2.10",
+    "pydantic-settings>=2.7",
+    "typer>=0.15",
+    "python-dotenv>=1.0",
+]
+
+[tool.poetry]
+packages = [{ include = "app" }]
+
+[tool.poetry.dependencies]
+python = ">=3.13,<4"
+fastapi = ">=0.115"
+uvicorn = { version = ">=0.32", extras = ["standard"] }
+pydantic = ">=2.10"
+pydantic-settings = ">=2.7"
+typer = ">=0.15"
+python-dotenv = ">=1.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=8.3"
+pytest-asyncio = ">=0.24"
+pytest-cov = ">=6.0"
+httpx = ">=0.28"
+
+[tool.poetry.group.lint.dependencies]
+mypy = ">=1.13"
+ruff = ">=0.8"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.mypy]
+strict = true
+ignore_missing_imports = true
+show_error_codes = true
+pretty = true
+exclude = ["web/"]
+
+[tool.ruff]
+extend-exclude = ["web", "migrations/versions"]
+
+[tool.ruff.lint]
+select = ["A", "ARG", "B", "C4", "PT", "RSE", "RET", "SIM", "T20", "E", "W", "F", "I", "N", "UP"]
+ignore = ["B008"]
+
+[tool.ruff.lint.isort]
+forced-separate = ["tests", "app"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["app"]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
