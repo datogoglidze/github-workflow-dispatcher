@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import Boolean, ForeignKey, Index, Integer, String
+from sqlalchemy import JSON, Boolean, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.infra.sqlite import Base
@@ -64,4 +65,31 @@ class WorkflowModel(Base):
     __table_args__ = (
         Index("ix_workflows_repo_id", "repo_id"),
         Index("ix_workflows_github_workflow_id", "github_workflow_id"),
+    )
+
+
+class DispatchLogModel(Base):
+    __tablename__ = "dispatch_logs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    schedule_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    triggered_at: Mapped[datetime] = mapped_column(UtcDateTime, nullable=False)
+    status_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    run_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    response_payload: Mapped[str | None] = mapped_column(Text, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    repository_full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    repository_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    workflow_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    workflow_path: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    workflow_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    github_workflow_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    cron_expression: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    ref: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    resolved_ref: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    inputs: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+
+    __table_args__ = (
+        Index("ix_dispatch_logs_schedule_id", "schedule_id"),
+        Index("ix_dispatch_logs_triggered_at", "triggered_at"),
     )

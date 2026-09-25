@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel
 
 from app.infra.fastapi.repositories.schemas import RepositoryResponse
@@ -30,3 +32,8 @@ class SyncResponse(BaseModel):
     repositories_synced: int
     workflows_synced: int
     workflows_marked_deleted: int
+
+
+class TriggerWorkflowRequest(BaseModel):
+    ref: str | None = None
+    inputs: dict[str, Any] | None = None

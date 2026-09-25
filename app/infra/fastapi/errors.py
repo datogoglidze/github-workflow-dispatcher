@@ -8,6 +8,7 @@ from app.core.errors import (
     GitHubApiError,
     GitHubNotConfiguredError,
     RateLimitExceededError,
+    WorkflowNotDispatchableError,
 )
 from app.infra.fastapi.response import (
     ErrorResponse,
@@ -53,3 +54,9 @@ def setup_exception_handlers(app: FastAPI) -> None:
         _request: Request, exc: GitHubNotConfiguredError
     ) -> ErrorResponse:
         return ErrorResponse(status_code=503, message=str(exc))
+
+    @app.exception_handler(WorkflowNotDispatchableError)
+    async def workflow_not_dispatchable_handler(
+        _request: Request, exc: WorkflowNotDispatchableError
+    ) -> ResourceValidationError:
+        return ResourceValidationError(message=str(exc))

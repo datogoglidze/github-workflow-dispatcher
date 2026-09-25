@@ -45,3 +45,16 @@ class GitHubNotConfiguredError(Exception):
 
     def __str__(self) -> str:
         return f"GitHub not configured — missing: {', '.join(self.missing)}"
+
+
+@dataclass
+class WorkflowNotDispatchableError(Exception):
+    workflow_id: str
+    name: str
+    reason: str
+
+    def __str__(self) -> str:
+        return (
+            f"Workflow '{self.name}' ({self.workflow_id}) cannot be dispatched: "
+            f"{self.reason}"
+        )

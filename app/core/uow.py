@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
+from app.core.logs.ports import DispatchLogsRepository
 from app.core.repositories.ports import RepositoriesRepository
 from app.core.workflows.ports import WorkflowsRepository
 
@@ -12,6 +13,9 @@ class UnitOfWork(Protocol):
 
     @property
     def workflows(self) -> WorkflowsRepository: ...
+
+    @property
+    def logs(self) -> DispatchLogsRepository: ...
 
     def commit(self) -> None: ...
 

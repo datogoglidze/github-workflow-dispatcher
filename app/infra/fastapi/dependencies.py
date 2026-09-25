@@ -4,6 +4,8 @@ from typing import Annotated
 
 from fastapi import Depends, Request
 
+from app.core.dispatcher.service import DispatcherService
+from app.core.logs.service import DispatchLogsService
 from app.core.repositories.service import RepositoriesService
 from app.core.sync.service import SyncService
 from app.core.workflows.service import WorkflowsService
@@ -26,6 +28,17 @@ def get_sync_service(request: Request) -> SyncService:
     return request.app.state.sync_service
 
 
+def get_dispatcher_service(request: Request) -> DispatcherService:
+    """Provide the DispatcherService from app state."""
+    return request.app.state.dispatcher_service
+
+
+def get_logs_service(request: Request) -> DispatchLogsService:
+    """Provide a DispatchLogsService backed by the request's database."""
+    database = request.app.state.database
+    return DispatchLogsService(uow=database.uow())
+
+
 RepositoriesServiceDependency = Annotated[
     RepositoriesService, Depends(get_repositories_service)
 ]
@@ -33,3 +46,11 @@ RepositoriesServiceDependency = Annotated[
 WorkflowsServiceDependency = Annotated[WorkflowsService, Depends(get_workflows_service)]
 
 SyncServiceDependency = Annotated[SyncService, Depends(get_sync_service)]
+
+DispatcherServiceDependency = Annotated[
+    DispatcherService, Depends(get_dispatcher_service)
+]
+
+DispatchLogsServiceDependency = Annotated[
+    DispatchLogsService, Depends(get_logs_service)
+]

@@ -7,15 +7,18 @@ from fastapi import APIRouter, Query, Request
 
 from app.core.errors import DoesNotExistError
 from app.infra.fastapi.dependencies import (
+    DispatcherServiceDependency,
     RepositoriesServiceDependency,
     SyncServiceDependency,
     WorkflowsServiceDependency,
 )
+from app.infra.fastapi.logs.mappers import map_dispatch_log
 from app.infra.fastapi.query import parse_query_filters
 from app.infra.fastapi.repositories.mappers import map_repository
 from app.infra.fastapi.response import ResourceFound
 from app.infra.fastapi.workflows.schemas import (
     SyncResponse,
+    TriggerWorkflowRequest,
     WorkflowResponse,
     WorkflowsResponse,
 )
@@ -103,3 +106,15 @@ async def get_workflow(
     return ResourceFound(
         **{"workflow": _build_workflow_response(workflow, repo_map).model_dump()}
     )
+
+
+@router.post("/workflows/{workflow_id}/trigger", response_model=None)
+async def trigger_workflow(
+    workflow_id: str,
+    dispatcher: DispatcherServiceDependency,
+    body: TriggerWorkflowRequest | None = None,
+) -> ResourceFound:
+    ref = body.ref if body is not None else None
+    inputs = body.inputs if body is not None else None
+    log = await dispatcher.trigger_workflow(workflow_id, ref=ref, inputs=inputs)
+    return ResourceFound(**{"log": map_dispatch_log(log).model_dump()})
