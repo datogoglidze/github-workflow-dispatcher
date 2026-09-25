@@ -5,14 +5,16 @@ from fastapi import FastAPI
 from fastapi.routing import APIRouter
 
 from app.infra.fastapi.app import create_api
+from app.infra.sqlite.database import Sqlite
 from app.runner.settings import Settings
 
 
 class SchedulerApi:
     """Builder for the FastAPI application."""
 
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, database: Sqlite) -> None:
         self._settings = settings
+        self._database = database
         self._routers: list[APIRouter] = []
         self._origins: list[str] = list(settings.cors_origins)
 
@@ -27,7 +29,12 @@ class SchedulerApi:
         return self
 
     def build(self) -> FastAPI:
-        return create_api(routers=self._routers, cors_origins=self._origins)
+        return create_api(
+            routers=self._routers,
+            cors_origins=self._origins,
+            database=self._database,
+            database_migrate=self._settings.database_migrate,
+        )
 
 
 class UvicornServer:

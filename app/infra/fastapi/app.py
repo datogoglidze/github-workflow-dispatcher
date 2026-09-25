@@ -13,6 +13,8 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from app.infra.fastapi.errors import setup_exception_handlers
+from app.infra.sqlite import Base
+from app.infra.sqlite.database import Sqlite
 
 _logger = logging.getLogger(__name__)
 
@@ -21,17 +23,34 @@ def create_api(
     *,
     routers: list[APIRouter],
     cors_origins: list[str],
+    database: Sqlite,
+    database_migrate: bool = True,
     lifespan_hooks: list[Callable[[], AsyncGenerator[None]]] | None = None,
 ) -> FastAPI:
     @asynccontextmanager
-    async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
+    async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         _logger.info("Starting github-workflow-dispatcher API")
+
+        # Database initialisation
+        if database.is_in_memory:
+            _logger.info("In-memory database: creating schema via metadata")
+            Base.metadata.create_all(database.engine)
+        else:
+            from app.infra.alembic import migrate_database
+
+            migrate_database(database.database_url, enabled=database_migrate)
+
+        app.state.database = database
+
         if lifespan_hooks:
             for hook in lifespan_hooks:
                 async for _ in hook():
                     pass
+
         yield
+
         _logger.info("Stopped github-workflow-dispatcher API")
+        database.dispose()
 
     app = FastAPI(
         title="GitHub Workflow Dispatcher & Scheduler",

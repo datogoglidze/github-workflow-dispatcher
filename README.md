@@ -88,6 +88,55 @@ All variables are prefixed with `WORKFLOW_DISPATCHER_`:
 |---|---|---|
 | `WORKFLOW_DISPATCHER_LOG_LEVEL` | `INFO` | Python log level |
 | `WORKFLOW_DISPATCHER_FRONTEND_ORIGINS` | `*` | Comma-separated CORS origins |
+| `WORKFLOW_DISPATCHER_DATABASE_URL` | `sqlite:///./github_workflow_dispatcher.sqlite` | SQLAlchemy database URL |
+| `WORKFLOW_DISPATCHER_DATABASE_MIGRATE` | `true` | Run Alembic migrations on startup |
+
+The database file is created and migrated automatically on first start. In Docker the database lives at `/var/databases/github_workflow_dispatcher.sqlite` on a declared volume.
+
+## API endpoints (Step 2)
+
+### Health
+
+```
+GET /health
+```
+Returns `{ "status": "healthy", "database": "connected" }`.
+
+### Repositories
+
+All responses use the envelope `{ "status": "success", "code": 200, "data": { ... } }`. Errors use `{ "status": "fail", "code": <int>, "error": { "message": "..." } }`.
+
+#### List repositories
+```
+GET /repositories?limit=100&offset=0
+```
+Returns a paginated list. `total` is the unpaginated count; `count` is the number of items returned.
+
+```json
+{
+  "status": "success",
+  "code": 200,
+  "data": {
+    "repositories": [...],
+    "count": 2,
+    "total": 42,
+    "limit": 100,
+    "offset": 0
+  }
+}
+```
+
+Query parameters:
+| Parameter | Default | Constraints |
+|---|---|---|
+| `limit` | `100` | 1–1000 |
+| `offset` | `0` | ≥ 0 |
+
+#### Get a repository
+```
+GET /repositories/{repo_id}
+```
+Returns `{ "data": { "repository": { ... } } }` or a 404 error envelope if not found.
 
 ## CI
 
