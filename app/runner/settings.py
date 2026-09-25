@@ -15,6 +15,8 @@ class Settings(BaseSettings):
 
     log_level: str = "INFO"
     frontend_origins: str = "*"
+    database_url: str = "sqlite:///./github_workflow_dispatcher.sqlite"
+    database_migrate: bool = True
 
     @cached_property
     def cors_origins(self) -> list[str]:

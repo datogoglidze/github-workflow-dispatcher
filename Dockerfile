@@ -22,7 +22,8 @@ FROM python:3.13-slim AS runtime
 
 ENV PATH=/opt/venv/bin:$PATH \
     PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    WORKFLOW_DISPATCHER_DATABASE_URL=sqlite:////var/databases/github_workflow_dispatcher.sqlite
 
 ARG RELEASE=unknown
 ENV RELEASE=$RELEASE
@@ -32,17 +33,18 @@ WORKDIR /code
 # Copy the virtual environment and application source
 COPY --from=builder /opt/venv /opt/venv
 COPY app/ ./app/
+COPY migrations/ ./migrations/
+COPY alembic.ini ./
 
-# Placeholder: copy migrations and alembic config when added in a later step
-# COPY migrations/ ./migrations/
-# COPY alembic.ini ./
+# Create database directory owned by the app user, then declare it as a volume
+RUN addgroup --system appgroup \
+    && adduser --system --ingroup appgroup appuser \
+    && mkdir -p /var/databases \
+    && chown appuser:appgroup /var/databases
 
-# Placeholder: declare database volume when persistence is added
-# VOLUME ["/var/databases"]
-
-# Run as a non-root user
-RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
 USER appuser
+
+VOLUME ["/var/databases"]
 
 EXPOSE 8000
 

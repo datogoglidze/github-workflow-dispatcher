@@ -69,12 +69,14 @@ def test_error_response_with_data() -> None:
 async def make_test_app() -> FastAPI:
     from fastapi import APIRouter
 
-    from app.infra.fastapi.health.router import router as health_router
-    from app.infra.fastapi.root.router import router as root_router
-    from app.runner.fastapi import SchedulerApi
+    from app.infra.sqlite.database import Sqlite
+    from app.runner.app import create_app
+    from app.runner.container import AppContainer
     from app.runner.settings import Settings
 
     settings = Settings()
+    database = Sqlite(database_url="sqlite://")
+    container = AppContainer(database=database)
 
     extra = APIRouter()
 
@@ -82,13 +84,9 @@ async def make_test_app() -> FastAPI:
     async def explode() -> dict[str, Any]:
         raise ValueError("something went wrong")
 
-    return (
-        SchedulerApi(settings)
-        .with_router(root_router)
-        .with_router(health_router)
-        .with_router(extra)
-        .build()
-    )
+    app = create_app(settings=settings, container=container)
+    app.include_router(extra)
+    return app
 
 
 async def test_value_error_returns_422_envelope() -> None:
