@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from logging.config import fileConfig
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
@@ -11,8 +10,7 @@ from app.infra.sqlite import Base
 
 config = context.config
 
-if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+# Logging is managed by the application/Uvicorn, not Alembic.
 
 target_metadata = Base.metadata
 

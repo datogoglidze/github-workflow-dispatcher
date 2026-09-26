@@ -88,15 +88,43 @@ def create_api(
         request: Request, call_next: Callable[[Request], Any]
     ) -> Response:
         start = time.perf_counter()
-        response: Response = await call_next(request)
+        try:
+            response: Response = await call_next(request)
+        except Exception:
+            duration = time.perf_counter() - start
+            _logger.exception(
+                "%s %s failed in %.3fs",
+                request.method,
+                request.url.path,
+                duration,
+            )
+            raise
+
         duration = time.perf_counter() - start
-        _logger.info(
-            "%s %s completed with %s in %.3fs",
-            request.method,
-            request.url.path,
-            response.status_code,
-            duration,
-        )
+        if response.status_code >= 500:
+            _logger.error(
+                "%s %s completed with %s in %.3fs",
+                request.method,
+                request.url.path,
+                response.status_code,
+                duration,
+            )
+        elif response.status_code >= 400:
+            _logger.warning(
+                "%s %s completed with %s in %.3fs",
+                request.method,
+                request.url.path,
+                response.status_code,
+                duration,
+            )
+        else:
+            _logger.info(
+                "%s %s completed with %s in %.3fs",
+                request.method,
+                request.url.path,
+                response.status_code,
+                duration,
+            )
         return response
 
     for router in routers:

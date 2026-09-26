@@ -24,5 +24,4 @@ def test_cors_origins_single_value() -> None:
 
 
 def test_default_log_level() -> None:
-    s = Settings()
-    assert s.log_level == "INFO"
+    assert Settings.model_fields["log_level"].default == "INFO"
