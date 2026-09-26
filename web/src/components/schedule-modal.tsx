@@ -38,7 +38,7 @@ export function ScheduleModal({
 }) {
   const editing = schedule ?? null
   const [selected, setSelected] = useState<Workflow | null>(null)
-  const [cron, setCron] = useState("")
+  const [cron, setCron] = useState("0 0 * * *")
   const [refValue, setRefValue] = useState("")
   const [inputsText, setInputsText] = useState("")
   const [isEnabled, setIsEnabled] = useState(true)
@@ -52,7 +52,7 @@ export function ScheduleModal({
     setSeenKey(resetKey)
     if (open) {
       setSelected(editing?.workflow ?? workflow ?? null)
-      setCron(editing?.cron_expression ?? "")
+      setCron(editing?.cron_expression ?? "0 0 * * *")
       setRefValue(editing?.ref ?? "")
       setInputsText(inputsJsonText(editing?.inputs))
       setIsEnabled(editing?.is_enabled ?? true)
@@ -101,7 +101,7 @@ export function ScheduleModal({
   return (
     <Dialog open={open} onOpenChange={requestClose}>
       <DialogContent
-        className="sm:max-w-lg"
+        className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-lg"
         showCloseButton={!pending}
         onEscapeKeyDown={(event) => {
           if (pending) event.preventDefault()
@@ -110,13 +110,13 @@ export function ScheduleModal({
           if (pending) event.preventDefault()
         }}
       >
-        <DialogHeader>
+        <DialogHeader className="shrink-0">
           <DialogTitle>{editing ? "Edit Schedule" : "Create Schedule"}</DialogTitle>
           <DialogDescription>
             Cron expressions use five fields and run in UTC.
           </DialogDescription>
         </DialogHeader>
-        <div className="max-h-[70vh] space-y-3 overflow-y-auto pr-1">
+        <div className="min-h-0 space-y-3 overflow-y-auto">
           <div className="space-y-1.5">
             <Label>Workflow</Label>
             <WorkflowSelect value={selected} onChange={setSelected} disabled={pending || editing !== null} />
@@ -181,7 +181,7 @@ export function ScheduleModal({
             onChange={setInputsText}
             disabled={pending}
           />
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-2 pr-3 pb-2">
             <Label htmlFor="schedule-active">Schedule Active</Label>
             <Switch
               id="schedule-active"
@@ -191,7 +191,7 @@ export function ScheduleModal({
             />
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="shrink-0">
           <Button
             type="button"
             onClick={() => void save()}

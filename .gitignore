@@ -22,6 +22,8 @@ env/
 *.sqlite3
 *.sqlite
 *.db
+*.sqlite-shm
+*.sqlite-wal
 
 # Coverage
 coverage.xml
