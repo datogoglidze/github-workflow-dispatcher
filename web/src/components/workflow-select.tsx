@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import type { Workflow, WorkflowList } from "@/api/types"
 import { listWorkflows } from "@/api/workflows"
 import { Button } from "@/components/ui/button"
@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useFetch } from "@/hooks/use-fetch"
 
-const PAGE_SIZE = 10
+const PAGE_SIZE = 15
 
 export function WorkflowSelect({
   value,
@@ -21,17 +21,18 @@ export function WorkflowSelect({
   const [query, setQuery] = useState("")
   const [debounced, setDebounced] = useState("")
   const [page, setPage] = useState(0)
+  const [accumulated, setAccumulated] = useState<Workflow[]>([])
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebounced(query.trim()), 300)
     return () => window.clearTimeout(timer)
   }, [query])
 
-  const [seenQuery, setSeenQuery] = useState(debounced)
-  if (seenQuery !== debounced) {
-    setSeenQuery(debounced)
-    if (page !== 0) setPage(0)
-  }
+  // Reset when query or open state changes
+  useEffect(() => {
+    setAccumulated([])
+    setPage(0)
+  }, [debounced, open])
 
   const { data, error, loading } = useFetch(
     () => {
@@ -46,9 +47,40 @@ export function WorkflowSelect({
     [open, debounced, page],
   )
 
-  const workflows = data?.workflows ?? []
+  useEffect(() => {
+    if (data?.workflows) {
+      setAccumulated((prev) => {
+        if (page === 0) return data.workflows
+        const next = [...prev]
+        for (const w of data.workflows) {
+          if (!next.some((existing) => existing.id === w.id)) {
+            next.push(w)
+          }
+        }
+        return next
+      })
+    }
+  }, [data, page])
+
+  const observerRef = useRef<IntersectionObserver | null>(null)
+  const lastItemRef = useCallback(
+    (node: HTMLButtonElement | null) => {
+      if (loading) return
+      if (observerRef.current) observerRef.current.disconnect()
+
+      if (node) {
+        observerRef.current = new IntersectionObserver((entries) => {
+          if (entries[0].isIntersecting && accumulated.length < (data?.total ?? 0)) {
+            setPage((p) => p + 1)
+          }
+        })
+        observerRef.current.observe(node)
+      }
+    },
+    [loading, accumulated.length, data?.total],
+  )
+
   const total = data?.total ?? 0
-  const offset = page * PAGE_SIZE
 
   return (
     <Popover open={disabled ? false : open} onOpenChange={setOpen}>
@@ -70,62 +102,46 @@ export function WorkflowSelect({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-96">
+      <PopoverContent align="start" className="w-96 p-2">
         <Input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search repository"
-          className="h-7 text-xs"
+          className="h-8 text-xs mb-2"
           aria-label="Search repositories"
           autoFocus
         />
-        {error ? <p className="text-xs text-destructive">{error.message}</p> : null}
-        <div className="max-h-64 space-y-1 overflow-auto">
-          {loading && !data ? <p className="text-xs text-muted-foreground">Loading…</p> : null}
-          {!loading && workflows.length === 0 ? (
-            <p className="text-xs text-muted-foreground">No workflows</p>
+        {error ? <p className="text-xs text-destructive mb-2 px-1">{error.message}</p> : null}
+        
+        <div className="max-h-64 space-y-1 overflow-y-auto px-1">
+          {accumulated.length === 0 && !loading && !error ? (
+            <p className="text-xs text-muted-foreground py-2 text-center">No workflows found</p>
           ) : (
-            workflows.map((workflow) => (
-              <button
-                key={workflow.id}
-                type="button"
-                className="flex w-full flex-col rounded-md px-2 py-1.5 text-left hover:bg-muted"
-                onClick={() => {
-                  onChange(workflow)
-                  setOpen(false)
-                }}
-              >
-                <span className="text-xs text-muted-foreground">{workflow.repository.full_name}</span>
-                <span className="text-sm">{workflow.name}</span>
-                <span className="font-mono text-xs text-muted-foreground">{workflow.path}</span>
-              </button>
-            ))
+            accumulated.map((workflow, index) => {
+              const isLast = index === accumulated.length - 1
+              return (
+                <button
+                  key={workflow.id}
+                  ref={isLast ? lastItemRef : null}
+                  type="button"
+                  className="flex w-full flex-col rounded-md px-2 py-1.5 text-left hover:bg-muted"
+                  onClick={() => {
+                    onChange(workflow)
+                    setOpen(false)
+                  }}
+                >
+                  <span className="text-xs text-muted-foreground">{workflow.repository.full_name}</span>
+                  <span className="text-sm">{workflow.name}</span>
+                  <span className="font-mono text-xs text-muted-foreground">{workflow.path}</span>
+                </button>
+              )
+            })
           )}
-        </div>
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-xs text-muted-foreground">
-            {total === 0 ? "0" : `${offset + 1}–${Math.min(offset + workflows.length, total)}`} of {total}
-          </span>
-          <div className="flex gap-1">
-            <Button
-              type="button"
-              variant="outline"
-              size="xs"
-              onClick={() => setPage((current) => Math.max(0, current - 1))}
-              disabled={page === 0}
-            >
-              Prev
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="xs"
-              onClick={() => setPage((current) => current + 1)}
-              disabled={offset + PAGE_SIZE >= total}
-            >
-              Next
-            </Button>
-          </div>
+          {loading && (
+            <div className="py-2 text-center">
+              <span className="text-xs text-muted-foreground">Loading…</span>
+            </div>
+          )}
         </div>
       </PopoverContent>
     </Popover>

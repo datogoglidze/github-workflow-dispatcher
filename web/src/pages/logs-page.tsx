@@ -232,13 +232,12 @@ export function LogsPage() {
           </Table>
         )}
         <Pagination
-          offset={offset}
+          page={page}
+          onPage={setPage}
           count={data?.count ?? 0}
           total={data?.total ?? 0}
           pageSize={pageSize}
           onPageSize={setPageSize}
-          onPrev={() => setPage((current) => Math.max(0, current - 1))}
-          onNext={() => setPage((current) => current + 1)}
         />
       </DataTableCard>
       <LogDetailsDrawer
