@@ -9,7 +9,7 @@ export function DataTableCard({
   onClear,
   children,
 }: {
-  title: string
+  title?: string
   activeFilters: number
   onClear: () => void
   children: ReactNode
@@ -17,20 +17,19 @@ export function DataTableCard({
   return (
     <Card size="sm">
       <CardHeader className="border-b">
-        <div className="flex items-center gap-3">
-          <CardTitle>{title}</CardTitle>
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
+          {title && <CardTitle>{title}</CardTitle>}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="flex h-8 items-center gap-2 px-2 shadow-sm"
+            onClick={onClear}
+            disabled={activeFilters === 0}
+          >
+            <span className="text-xs font-medium">Clear filters</span>
             <Badge variant="secondary">{activeFilters}</Badge>
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
-              onClick={onClear}
-              disabled={activeFilters === 0}
-            >
-              Clear filters
-            </Button>
-          </div>
+          </Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">{children}</CardContent>

@@ -89,7 +89,6 @@ export function WorkflowsPage() {
     <div className="space-y-4">
       <h1 className="text-lg font-semibold">Workflows</h1>
       <DataTableCard
-        title="Workflows"
         activeFilters={columnFilters.activeCount}
         onClear={columnFilters.clear}
       >
@@ -166,13 +165,12 @@ export function WorkflowsPage() {
           </Table>
         )}
         <Pagination
-          offset={offset}
+          page={page}
+          onPage={setPage}
           count={data?.count ?? 0}
           total={data?.total ?? 0}
           pageSize={pageSize}
           onPageSize={setPageSize}
-          onPrev={() => setPage((current) => Math.max(0, current - 1))}
-          onNext={() => setPage((current) => current + 1)}
         />
       </DataTableCard>
       <RunWorkflowModal
