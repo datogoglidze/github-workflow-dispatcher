@@ -92,6 +92,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL || 'http://localhost:8000' }}
-            VITE_BASE_PATH=${{ vars.VITE_BASE_PATH || '/github-workflow-dispatcher-web/' }}
+            VITE_BASE_PATH=${{ vars.VITE_BASE_PATH || '/' }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
