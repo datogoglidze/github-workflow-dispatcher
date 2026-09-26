@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any, Generic, TypeVar
 
-from sqlalchemy import Boolean, asc, desc, func, inspect, select
+from sqlalchemy import Boolean, DateTime, asc, desc, func, inspect, select
 from sqlalchemy.orm import Session
 
 from app.infra.sqlite import Base
@@ -13,6 +14,21 @@ EntityT = TypeVar("EntityT")
 
 _BOOL_TRUE = {"true", "1", "yes"}
 _BOOL_FALSE = {"false", "0", "no"}
+
+_DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _is_date_value(value: Any) -> bool:
+    if isinstance(value, str):
+        if "," in value:
+            return all(
+                not v.strip() or bool(_DATE_PATTERN.match(v.strip()))
+                for v in value.split(",")
+            )
+        return bool(_DATE_PATTERN.match(value))
+    if isinstance(value, (list, tuple, set)) and value:
+        return all(isinstance(v, str) and bool(_DATE_PATTERN.match(v)) for v in value)
+    return False
 
 
 @dataclass
@@ -97,6 +113,22 @@ class BaseSqliteRepository(Generic[ModelT, EntityT]):  # noqa: UP046
 
             value = self._coerce_value(column, value)
 
+            try:
+                col_type = column.property.columns[0].type
+            except Exception:
+                col_type = getattr(column, "type", None)
+
+            from sqlalchemy.types import TypeDecorator
+
+            real_type = (
+                col_type.impl if isinstance(col_type, TypeDecorator) else col_type
+            )
+
+            if isinstance(real_type, DateTime) and _is_date_value(value):
+                from sqlalchemy import String, cast
+
+                column = cast(func.date(column), String)
+
             if op == "eq":
                 stmt = stmt.where(column == value)
             elif op == "ne":
@@ -110,6 +142,15 @@ class BaseSqliteRepository(Generic[ModelT, EntityT]):  # noqa: UP046
                 stmt = stmt.where(column < value)
             elif op == "gt":
                 stmt = stmt.where(column > value)
+            elif op == "between":
+                vals = value.split(",") if isinstance(value, str) else value
+                if len(vals) == 2:
+                    if vals[0] and vals[1]:
+                        stmt = stmt.where(column.between(vals[0], vals[1]))
+                    elif vals[0]:
+                        stmt = stmt.where(column >= vals[0])
+                    elif vals[1]:
+                        stmt = stmt.where(column <= vals[1])
             elif op == "has":
                 # dot-path relationship filter via .has()
                 rel_attr = getattr(self.model, field.split(".")[0])

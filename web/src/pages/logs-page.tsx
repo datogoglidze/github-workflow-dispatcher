@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useSearchParams } from "react-router-dom"
 import { listLogs } from "@/api/logs"
 import type { DispatchLog } from "@/api/types"
+import { readFiltersFromParams } from "@/lib/filters"
 import { StatusCodeBadge } from "@/components/badges"
 import { CronBadge } from "@/components/cron-badge"
 import { ColumnFilterRow } from "@/components/data-table/column-filter-row"
@@ -32,6 +33,7 @@ const filterColumns = [
   { key: "workflow_name", type: "text" as const },
   { key: "repository_full_name", type: "text" as const },
   { key: "resolved_ref", type: "text" as const },
+  { key: "triggered_at", type: "date" as const },
 ]
 
 const columns = [
@@ -43,7 +45,7 @@ const columns = [
     filterKey: "status_code",
   },
   { id: "run", label: "Run" },
-  { id: "triggered", label: "Triggered", sortField: "triggered_at" },
+  { id: "triggered", label: "Triggered", sortField: "triggered_at", filter: "date" as const, filterKey: "triggered_at" },
   {
     id: "workflow",
     label: "Workflow",
@@ -70,22 +72,9 @@ const columns = [
   { id: "inspect", label: "Inspect" },
 ]
 
-function readFilter(params: URLSearchParams, key: string) {
-  const exact = params.get(`${key}[eq]`)
-  if (exact != null && exact !== "") return exact
-  return params.get(`${key}[ilike]`)?.replace(/^%|%$/g, "") ?? ""
-}
-
 export function LogsPage() {
   const [searchParams] = useSearchParams()
-  const [initialFilters] = useState<Record<string, string>>(() => {
-    const filters: Record<string, string> = {}
-    for (const column of filterColumns) {
-      const value = readFilter(searchParams, column.key)
-      if (value) filters[column.key] = value
-    }
-    return filters
-  })
+  const [initialFilters] = useState<Record<string, string>>(() => readFiltersFromParams(filterColumns, searchParams))
   const { refreshKey } = useAppOutlet()
   const columnFilters = useColumnFilters(filterColumns, initialFilters)
   const { sort, toggle } = useSort("-triggered_at")
