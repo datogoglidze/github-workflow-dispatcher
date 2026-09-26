@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-base="${VITE_BASE_PATH:-/github-workflow-dispatcher-web/}"
+base="${VITE_BASE_PATH:-/}"
 case "$base" in
   /*) ;;
   *) base="/$base" ;;
@@ -35,7 +35,7 @@ server {
     root /usr/share/nginx/html;
 
     location = / {
-        return 302 ${base};
+        return 302 "${base}";
     }
 
     location ${base} {
