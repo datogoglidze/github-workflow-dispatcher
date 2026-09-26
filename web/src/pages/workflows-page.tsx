@@ -10,6 +10,7 @@ import { SortableHeader } from "@/components/data-table/sortable-header"
 import { TableSkeleton } from "@/components/data-table/table-skeleton"
 import { ExternalAnchor } from "@/components/external-anchor"
 import { RunWorkflowModal } from "@/components/run-workflow-modal"
+import { ScheduleModal } from "@/components/schedule-modal"
 import { Button } from "@/components/ui/button"
 import {
   Table,
@@ -18,11 +19,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { useAppOutlet } from "@/hooks/use-app-outlet"
 import { useColumnFilters } from "@/hooks/use-column-filters"
 import { useFetch } from "@/hooks/use-fetch"
@@ -66,6 +62,7 @@ export function WorkflowsPage() {
   const { sort, toggle } = useSort("name")
   const { pageSize, setPageSize, page, setPage, limit, offset } = usePagination()
   const [selected, setSelected] = useState<Workflow | null>(null)
+  const [scheduleTarget, setScheduleTarget] = useState<Workflow | null>(null)
   const filterKey = JSON.stringify(columnFilters.params)
   const queryKey = `${filterKey}|${sort ?? ""}`
   const [seenQuery, setSeenQuery] = useState(queryKey)
@@ -152,16 +149,14 @@ export function WorkflowsPage() {
                             Run
                           </Button>
                         ) : null}
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span tabIndex={0} className="inline-flex">
-                              <Button type="button" size="xs" variant="outline" disabled>
-                                Schedule
-                              </Button>
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>Coming next</TooltipContent>
-                        </Tooltip>
+                        <Button
+                          type="button"
+                          size="xs"
+                          variant="outline"
+                          onClick={() => setScheduleTarget(workflow)}
+                        >
+                          Schedule
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -185,6 +180,13 @@ export function WorkflowsPage() {
         open={selected !== null}
         onOpenChange={(open) => {
           if (!open) setSelected(null)
+        }}
+      />
+      <ScheduleModal
+        workflow={scheduleTarget}
+        open={scheduleTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setScheduleTarget(null)
         }}
       />
     </div>

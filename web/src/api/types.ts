@@ -43,12 +43,33 @@ export interface WorkflowList {
   offset: number
 }
 
+export interface Schedule {
+  id: string
+  workflow_id: string
+  workflow: Workflow
+  cron_expression: string
+  ref: string | null
+  inputs: Record<string, unknown> | null
+  is_enabled: boolean
+  last_run_at: string | null
+  next_run_at: string | null
+}
+
+export interface ScheduleList {
+  schedules: Schedule[]
+  count: number
+  total: number
+  limit: number
+  offset: number
+}
+
 export interface DispatchTarget {
   repository_full_name: string
-  repository_url: string
+  repository_url: string | null
   workflow_name: string
   workflow_path: string
-  workflow_url: string
+  workflow_url: string | null
+  github_workflow_id?: number
   cron_expression: string | null
   ref: string | null
   resolved_ref: string | null
@@ -57,13 +78,22 @@ export interface DispatchTarget {
 
 export interface DispatchLog {
   id: string
-  schedule: unknown
-  target: DispatchTarget
+  schedule_id: string | null
+  schedule: Schedule | null
+  target: DispatchTarget | null
   triggered_at: string
   status_code: number | null
   run_url: string | null
   response_payload: unknown
   error_message: string | null
+}
+
+export interface DispatchLogList {
+  logs: DispatchLog[]
+  count: number
+  total: number
+  limit: number
+  offset: number
 }
 
 export interface HealthScheduler {
