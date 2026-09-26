@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from app.core.dispatcher.limiter import TokenBucketRateLimiter
 from app.core.dispatcher.service import DispatcherService
 from app.core.sync.service import SyncService
+from app.infra.scheduler.cron import apscheduler_cron
 from app.infra.scheduler.service import SchedulerService
 from app.infra.sqlite.database import Sqlite
 from app.plugins.github.client import GitHubClient
@@ -46,6 +47,7 @@ class AppContainer:
         dispatcher_service = DispatcherService(
             uow_factory=database.uow,
             github_client=github_client,
+            cron=apscheduler_cron,
             jitter_min_seconds=settings.jitter_min_seconds,
             jitter_max_seconds=settings.jitter_max_seconds,
             on_schedule_disabled=scheduler_service.remove_schedule_job,

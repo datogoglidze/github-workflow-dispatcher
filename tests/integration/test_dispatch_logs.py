@@ -11,6 +11,7 @@ from httpx import ASGITransport, AsyncClient
 from app.core.dispatcher.limiter import TokenBucketRateLimiter
 from app.core.dispatcher.service import DispatcherService
 from app.core.sync.service import SyncService
+from app.infra.scheduler.cron import apscheduler_cron
 from app.infra.sqlite.database import Sqlite
 from app.plugins.github.client import GitHubClient, WorkflowDispatchResult
 from app.runner.app import create_app
@@ -82,7 +83,11 @@ async def dispatch_client(
     )
 
     sync_service = SyncService(uow_factory=database.uow, github_client=mock_gh)
-    dispatcher = DispatcherService(uow_factory=database.uow, github_client=mock_gh)
+    dispatcher = DispatcherService(
+        uow_factory=database.uow,
+        github_client=mock_gh,
+        cron=apscheduler_cron,
+    )
     container = AppContainer(
         database=database,
         rate_limiter=rate_limiter,

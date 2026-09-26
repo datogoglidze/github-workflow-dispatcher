@@ -10,7 +10,8 @@ from typing import Any
 from app.core.errors import DoesNotExistError, WorkflowNotDispatchableError
 from app.core.logs.entities import DispatchLog, DispatchTarget
 from app.core.repositories.entities import Repository
-from app.core.schedules.entities import Schedule, next_run_at_for
+from app.core.schedules.cron import CronExpressions
+from app.core.schedules.entities import Schedule
 from app.core.workflows.entities import Workflow
 from app.plugins.github.client import GitHubClient
 
@@ -28,6 +29,7 @@ _NOT_DISPATCHABLE = (
 class DispatcherService:
     uow_factory: Callable[[], Any]
     github_client: GitHubClient
+    cron: CronExpressions
     jitter_min_seconds: float = 1.0
     jitter_max_seconds: float = 15.0
     on_schedule_disabled: Callable[[str], None] | None = None
@@ -205,7 +207,7 @@ class DispatcherService:
                         target=target,
                     )
                 )
-                _touch_schedule(uow, schedule_id, now)
+                self._touch_schedule(uow, schedule_id, now)
             else:
                 saved = uow.logs.create_one(
                     DispatchLog(
@@ -219,7 +221,7 @@ class DispatcherService:
                         target=target,
                     )
                 )
-                _touch_schedule(uow, schedule_id, now)
+                self._touch_schedule(uow, schedule_id, now)
 
         if status_code == 404:
             self._notify_disabled(schedule_id)
@@ -228,6 +230,20 @@ class DispatcherService:
     def _notify_disabled(self, schedule_id: str) -> None:
         if self.on_schedule_disabled is not None:
             self.on_schedule_disabled(schedule_id)
+
+    def _touch_schedule(self, uow: Any, schedule_id: str, now: datetime) -> None:
+        current = uow.schedules.read_one(schedule_id)
+        if current is None:
+            return
+        next_run = (
+            self.cron.next_run_at_for(current.cron_expression)
+            if current.is_enabled
+            else None
+        )
+        uow.schedules.update_one(
+            current.id,
+            replace(current, last_run_at=now, next_run_at=next_run),
+        )
 
 
 def _is_dispatchable(workflow: Workflow) -> bool:
@@ -252,15 +268,4 @@ def _target_snapshot(
         workflow_url=workflow.url if workflow is not None else None,
         ref=schedule.ref,
         inputs=schedule.inputs,
-    )
-
-
-def _touch_schedule(uow: Any, schedule_id: str, now: datetime) -> None:
-    current = uow.schedules.read_one(schedule_id)
-    if current is None:
-        return
-    next_run = next_run_at_for(current.cron_expression) if current.is_enabled else None
-    uow.schedules.update_one(
-        current.id,
-        replace(current, last_run_at=now, next_run_at=next_run),
     )

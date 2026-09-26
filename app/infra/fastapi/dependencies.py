@@ -10,6 +10,7 @@ from app.core.repositories.service import RepositoriesService
 from app.core.schedules.service import SchedulesService
 from app.core.sync.service import SyncService
 from app.core.workflows.service import WorkflowsService
+from app.infra.scheduler.cron import apscheduler_cron
 
 
 def get_repositories_service(request: Request) -> RepositoriesService:
@@ -37,7 +38,7 @@ def get_dispatcher_service(request: Request) -> DispatcherService:
 def get_schedules_service(request: Request) -> SchedulesService:
     """Provide a SchedulesService backed by the request's database."""
     database = request.app.state.database
-    return SchedulesService(uow=database.uow())
+    return SchedulesService(uow=database.uow(), cron=apscheduler_cron)
 
 
 def get_logs_service(request: Request) -> DispatchLogsService:

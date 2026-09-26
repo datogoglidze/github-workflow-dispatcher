@@ -5,26 +5,23 @@ from datetime import datetime
 from typing import Any
 
 from app.core.errors import DoesNotExistError, WorkflowNotDispatchableError
-from app.core.schedules.entities import (
-    Schedule,
-    next_run_at_for,
-    validate_cron_expression,
-)
+from app.core.schedules.cron import CronExpressions
+from app.core.schedules.entities import Schedule
 from app.core.uow import UnitOfWork
-
-
-def _next_run(schedule: Schedule) -> datetime | None:
-    if not schedule.is_enabled:
-        return None
-    return next_run_at_for(schedule.cron_expression)
 
 
 @dataclass(frozen=True)
 class SchedulesService:
     uow: UnitOfWork
+    cron: CronExpressions
+
+    def _next_run(self, schedule: Schedule) -> datetime | None:
+        if not schedule.is_enabled:
+            return None
+        return self.cron.next_run_at_for(schedule.cron_expression)
 
     def create_one(self, schedule: Schedule) -> Schedule:
-        validate_cron_expression(schedule.cron_expression)
+        self.cron.validate_cron_expression(schedule.cron_expression)
         with self.uow as uow:
             workflow = uow.workflows.read_one(schedule.workflow_id)
             if workflow is None:
@@ -38,12 +35,12 @@ class SchedulesService:
             stored = replace(
                 schedule,
                 last_run_at=None,
-                next_run_at=_next_run(schedule),
+                next_run_at=self._next_run(schedule),
             )
             return uow.schedules.create_one(stored)
 
     def update_one(self, schedule: Schedule) -> Schedule:
-        validate_cron_expression(schedule.cron_expression)
+        self.cron.validate_cron_expression(schedule.cron_expression)
         with self.uow as uow:
             existing = uow.schedules.read_one(schedule.id)
             if existing is None:
@@ -53,7 +50,7 @@ class SchedulesService:
                 id=existing.id,
                 workflow_id=existing.workflow_id,
                 last_run_at=existing.last_run_at,
-                next_run_at=_next_run(schedule),
+                next_run_at=self._next_run(schedule),
             )
             return uow.schedules.update_one(existing.id, stored)
 

@@ -1,13 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 from uuid import uuid4
-
-from apscheduler.triggers.cron import CronTrigger
-
-from app.core.errors import InvalidCronExpressionError
 
 
 @dataclass(frozen=True)
@@ -23,23 +19,3 @@ class Schedule:
 
     def disabled(self) -> Schedule:
         return replace(self, is_enabled=False, next_run_at=None)
-
-
-def validate_cron_expression(expr: str) -> None:
-    """Raise InvalidCronExpressionError unless expr is a 5-field cron in UTC."""
-    try:
-        CronTrigger.from_crontab(expr, timezone=UTC)
-    except (TypeError, ValueError) as exc:
-        raise InvalidCronExpressionError(expr) from exc
-
-
-def next_run_at_for(expr: str, *, now: datetime | None = None) -> datetime:
-    validate_cron_expression(expr)
-    trigger = CronTrigger.from_crontab(expr, timezone=UTC)
-    moment = now or datetime.now(UTC)
-    nxt = trigger.get_next_fire_time(None, moment)
-    if nxt is None:
-        raise InvalidCronExpressionError(expr)
-    if nxt.tzinfo is None:
-        return nxt.replace(tzinfo=UTC)
-    return nxt.astimezone(UTC)
