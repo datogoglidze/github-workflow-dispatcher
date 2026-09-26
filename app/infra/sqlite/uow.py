@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from types import TracebackType
 
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -72,7 +71,7 @@ class SqliteUnitOfWork:
         self,
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
-        exc_tb: TracebackType | None,
+        exc_tb: object,
     ) -> None:
         session = self._session
         self._session = None

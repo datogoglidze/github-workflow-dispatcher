@@ -27,12 +27,18 @@ def get_workflows_service(request: Request) -> WorkflowsService:
 
 def get_sync_service(request: Request) -> SyncService:
     """Provide the SyncService from app state."""
-    return request.app.state.sync_service
+    service = request.app.state.sync_service
+    if not isinstance(service, SyncService):
+        raise RuntimeError("Sync service is not configured")
+    return service
 
 
 def get_dispatcher_service(request: Request) -> DispatcherService:
     """Provide the DispatcherService from app state."""
-    return request.app.state.dispatcher_service
+    service = request.app.state.dispatcher_service
+    if not isinstance(service, DispatcherService):
+        raise RuntimeError("Dispatcher service is not configured")
+    return service
 
 
 def get_schedules_service(request: Request) -> SchedulesService:

@@ -12,6 +12,7 @@ from app.core.logs.entities import DispatchLog, DispatchTarget
 from app.core.repositories.entities import Repository
 from app.core.schedules.cron import CronExpressions
 from app.core.schedules.entities import Schedule
+from app.core.uow import UnitOfWork
 from app.core.workflows.entities import Workflow
 from app.plugins.github.client import GitHubClient
 
@@ -27,7 +28,7 @@ _NOT_DISPATCHABLE = (
 
 @dataclass
 class DispatcherService:
-    uow_factory: Callable[[], Any]
+    uow_factory: Callable[[], UnitOfWork]
     github_client: GitHubClient
     cron: CronExpressions
     jitter_min_seconds: float = 1.0

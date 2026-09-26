@@ -148,7 +148,9 @@ async def _create_schedule(client: AsyncClient, workflow_id: str) -> dict[str, A
         json={"workflow_id": workflow_id, "cron_expression": _CRON, "ref": "main"},
     )
     assert resp.status_code == 201, resp.text
-    return resp.json()["data"]["schedule"]
+    payload: dict[str, Any] = resp.json()
+    schedule: dict[str, Any] = payload["data"]["schedule"]
+    return schedule
 
 
 async def test_schedule_crud(schedule_client: tuple[AsyncClient, AsyncMock]) -> None:

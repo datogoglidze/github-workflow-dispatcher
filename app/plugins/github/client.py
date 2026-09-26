@@ -187,8 +187,9 @@ class GitHubClient:
             return []
         if resp.status_code != 200:
             raise GitHubApiError(resp.status_code, resp.text)
-        data = resp.json()
-        return data.get("workflows", [])
+        data: dict[str, Any] = resp.json()
+        workflows: list[dict[str, Any]] = data.get("workflows", [])
+        return workflows
 
     async def get_workflow_file(
         self, owner: str, repo: str, path: str
