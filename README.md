@@ -1,121 +1,274 @@
 # github-workflow-dispatcher
 
-A GitHub Actions scheduler and on-demand dispatcher. Target workflows use `workflow_dispatch`. A FastAPI backend, authenticated as a GitHub App on one organization, caches repositories and workflows in SQLite and fires dispatches with APScheduler (UTC). Every scheduled or manual dispatch is written to an audit log with the Actions run URL. The React UI browses repositories and workflows, manages schedules, runs workflows, and inspects logs.
+A GitHub Actions workflow scheduler and on-demand dispatcher. The system synchronizes repositories and `workflow_dispatch` workflows from a target GitHub organization, evaluates schedules in UTC using APScheduler, and records every dispatch in an audit log with links to the corresponding GitHub Actions run. It includes a FastAPI backend and a React/TypeScript web interface.
+
+## Table of Contents
+
+- [Architecture](#architecture)
+- [GitHub App Setup](#github-app-setup)
+- [Environment Configuration](#environment-configuration)
+  - [Backend Configuration](#backend-configuration)
+  - [Frontend Configuration](#frontend-configuration)
+- [Running the Project](#running-the-project)
+  - [1. Docker Compose (Local Build)](#1-docker-compose-local-build)
+  - [2. Prebuilt Docker Packages (GHCR)](#2-prebuilt-docker-packages-ghcr)
+  - [3. Local Development (make run and npm run dev)](#3-local-development-make-run-and-npm-run-dev)
+- [Development and Testing](#development-and-testing)
+  - [Backend Commands](#backend-commands)
+  - [Frontend Commands](#frontend-commands)
+- [API Documentation](#api-documentation)
+- [CI/CD and Container Registry](#cicd-and-container-registry)
 
 ## Architecture
 
-| Layer | Path | Role |
+| Layer | Path | Description |
 |---|---|---|
-| Core | `app/core` | Repositories, workflows, schedules, logs, sync, and dispatch |
-| Infrastructure | `app/infra` | FastAPI routers, SQLite, Alembic, APScheduler |
-| GitHub | `app/plugins/github` | GitHub App client and workflow YAML parsing |
-| Runner | `app/runner` | Settings, CLI, and composition root |
-| Web | `web/` | Vite, React, and TypeScript UI |
+| Core | `app/core` | Domain logic: repository sync, workflow dispatching, schedule execution, and audit logging |
+| Infrastructure | `app/infra` | FastAPI routers, SQLite database with Alembic migrations, APScheduler |
+| GitHub Plugin | `app/plugins/github` | GitHub App authentication, API client, and workflow YAML parser |
+| Runner | `app/runner` | Application settings, CLI entry points, and dependency injection root |
+| Web UI | `web/` | React 19, TypeScript, Vite, and Tailwind CSS frontend |
 
-## GitHub App setup
+## GitHub App Setup
 
-Create a GitHub App, install it on the organization, and set the environment variables below.
+The dispatcher authenticates to GitHub as an installed GitHub App.
 
-**Permissions**
+1. Navigate to your GitHub Organization settings > **Developer settings** > **GitHub Apps** > **New GitHub App**.
+2. Configure permissions:
 
-| Permission | Access |
-|---|---|
-| Actions | Read & write |
-| Contents | Read |
-| Metadata | Read |
+| Permission | Access | Purpose |
+|---|---|---|
+| Actions | Read & write | Trigger workflows and read workflow run details |
+| Contents | Read | Read workflow definitions (`.github/workflows/*.yml`) |
+| Metadata | Read | Organization and repository metadata |
 
-Generate a private key and note the App ID and installation ID.
+3. Generate a private key (`.pem`) under the App settings.
+4. Install the App onto your organization.
+5. Record the **App ID**, **Installation ID**, and **Organization Name**.
 
-## Environment variables
+## Environment Configuration
 
-Copy the examples and fill in the GitHub App values:
+Copy the example configuration files:
 
 ```bash
 cp .env.example .env
 cp web/.env.example web/.env
 ```
 
-### Backend
+### Backend Configuration
 
-All backend variables use the `WORKFLOW_DISPATCHER_` prefix.
-
-| Variable | Default | Description |
-|---|---|---|
-| `WORKFLOW_DISPATCHER_LOG_LEVEL` | `INFO` | Python log level |
-| `WORKFLOW_DISPATCHER_FRONTEND_ORIGINS` | `*` | Comma-separated CORS origins |
-| `WORKFLOW_DISPATCHER_DATABASE_URL` | `sqlite:///./github_workflow_dispatcher.sqlite` | SQLAlchemy database URL |
-| `WORKFLOW_DISPATCHER_DATABASE_MIGRATE` | `true` | Run Alembic migrations on startup |
-| `WORKFLOW_DISPATCHER_GITHUB_ORG` | | Organization login |
-| `WORKFLOW_DISPATCHER_GITHUB_APP_ID` | | GitHub App ID |
-| `WORKFLOW_DISPATCHER_GITHUB_APP_INSTALLATION_ID` | `0` | Installation ID |
-| `WORKFLOW_DISPATCHER_GITHUB_APP_PRIVATE_KEY` | | PEM private key (`\n` escapes are accepted) |
-| `WORKFLOW_DISPATCHER_RATE_LIMIT_PER_SECOND` | `3.0` | GitHub API token refill rate |
-| `WORKFLOW_DISPATCHER_RATE_LIMIT_BURST` | `5` | Token bucket capacity |
-| `WORKFLOW_DISPATCHER_JITTER_MIN_SECONDS` | `1.0` | Minimum dispatch jitter |
-| `WORKFLOW_DISPATCHER_JITTER_MAX_SECONDS` | `15.0` | Maximum dispatch jitter |
-| `WORKFLOW_DISPATCHER_SYNC_INTERVAL_HOURS` | `6` | Repository sync interval (`0` disables it) |
-
-### Frontend
+All backend environment variables are prefixed with `WORKFLOW_DISPATCHER_`:
 
 | Variable | Default | Description |
 |---|---|---|
-| `VITE_API_BASE_URL` | `http://localhost:8000` | API origin |
-| `VITE_BASE_PATH` | `/github-workflow-dispatcher-web/` | Vite base path |
+| `WORKFLOW_DISPATCHER_GITHUB_ORG` | | GitHub organization login (required) |
+| `WORKFLOW_DISPATCHER_GITHUB_APP_ID` | | GitHub App ID (required) |
+| `WORKFLOW_DISPATCHER_GITHUB_APP_INSTALLATION_ID` | `0` | GitHub App Installation ID (required) |
+| `WORKFLOW_DISPATCHER_GITHUB_APP_PRIVATE_KEY` | | PEM private key string (literal `\n` characters supported) |
+| `WORKFLOW_DISPATCHER_DATABASE_URL` | `sqlite:///./github_workflow_dispatcher.sqlite` | SQLAlchemy database connection string |
+| `WORKFLOW_DISPATCHER_DATABASE_MIGRATE` | `true` | Automatically run Alembic migrations on startup |
+| `WORKFLOW_DISPATCHER_FRONTEND_ORIGINS` | `*` | Allowed CORS origins (comma-separated list) |
+| `WORKFLOW_DISPATCHER_LOG_LEVEL` | `INFO` | Python logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
+| `WORKFLOW_DISPATCHER_RATE_LIMIT_PER_SECOND` | `3.0` | GitHub API rate limiter refill rate per second |
+| `WORKFLOW_DISPATCHER_RATE_LIMIT_BURST` | `5` | Maximum token bucket burst capacity |
+| `WORKFLOW_DISPATCHER_JITTER_MIN_SECONDS` | `1.0` | Minimum execution jitter for scheduled jobs |
+| `WORKFLOW_DISPATCHER_JITTER_MAX_SECONDS` | `15.0` | Maximum execution jitter for scheduled jobs |
+| `WORKFLOW_DISPATCHER_SYNC_INTERVAL_HOURS` | `6` | Repository sync interval in hours (`0` disables periodic sync) |
 
-## Local development
+### Frontend Configuration
 
-Prerequisites: Python 3.13+, Poetry, and Node.js 24.
+Configured in `web/.env`:
 
-Set `WORKFLOW_DISPATCHER_FRONTEND_ORIGINS=http://localhost:3000` in `.env`, then start both apps:
+| Variable | Default | Description |
+|---|---|---|
+| `VITE_API_BASE_URL` | `http://localhost:8000` | Backend API URL |
+| `VITE_BASE_PATH` | `/` | Base routing path for the frontend |
+
+## Running the Project
+
+> **Note:** All terminal commands throughout this guide assume a Bash shell (e.g. **Git Bash** on Windows, or standard terminal on Linux/macOS).
+
+### 1. Docker Compose (Local Build)
+
+Build and start both the backend API and frontend UI using the included `docker-compose.yml`:
+
+```bash
+# Using Makefile:
+make up
+# or start containers with raw command
+docker compose up -d --build
+```
+
+- **Backend API**: <http://localhost:8001> (OpenAPI documentation at <http://localhost:8001/docs>)
+- **Web UI**: <http://localhost:8002>
+- **Data Persistence**: SQLite database is stored locally as `github_workflow_dispatcher.sqlite` via volume mount `./:/var/databases`.
+
+To view container logs:
+
+```bash
+docker compose logs -f
+```
+
+To stop containers:
+
+```bash
+# Using Makefile:
+make down
+# Or with raw command:
+docker compose down
+```
+
+### 2. Prebuilt Docker Packages (GHCR)
+
+Pre-built Docker images are published to GitHub Container Registry (GHCR):
+
+- API: `ghcr.io/datogoglidze/github-workflow-dispatcher:latest`
+- Web UI: `ghcr.io/datogoglidze/github-workflow-dispatcher-web:latest`
+
+#### Option A: Running with Standalone Docker Commands
+
+1. Create a Docker network:
+```bash
+docker network create dispatcher-net
+```
+
+2. Run the Backend API:
+```bash
+docker run -d \
+  --name workflow-dispatcher-api \
+  --network dispatcher-net \
+  --env-file .env \
+  -e WORKFLOW_DISPATCHER_DATABASE_URL=sqlite:////var/databases/github_workflow_dispatcher.sqlite \
+  -v "$(pwd)/data:/var/databases" \
+  -p 8001:8000 \
+  ghcr.io/datogoglidze/github-workflow-dispatcher:latest
+```
+
+3. Run the Frontend Web UI:
+```bash
+docker run -d \
+  --name workflow-dispatcher-web \
+  --network dispatcher-net \
+  -p 8002:80 \
+  ghcr.io/datogoglidze/github-workflow-dispatcher-web:latest
+```
+
+#### Option B: Running with Docker Compose using Published Images
+
+Create a compose file (e.g., `docker-compose.ghcr.yml` or edit `docker-compose.yml`) referencing the published images:
+
+```yaml
+services:
+  backend:
+    image: ghcr.io/datogoglidze/github-workflow-dispatcher:latest
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./:/var/databases
+    environment:
+      - WORKFLOW_DISPATCHER_DATABASE_URL=sqlite:////var/databases/github_workflow_dispatcher.sqlite
+    env_file:
+      - .env
+
+  frontend:
+    image: ghcr.io/datogoglidze/github-workflow-dispatcher-web:latest
+    ports:
+      - "8002:80"
+```
+
+Start the containers:
+
+```bash
+docker compose -f docker-compose.ghcr.yml up -d
+```
+
+### 3. Local Development (make run and npm run dev)
+
+Run the backend and frontend directly on your local machine.
+
+#### Prerequisites
+
+- Python 3.13+
+- Poetry
+- Node.js 24+ and npm
+
+#### Setup Configuration
+
+Ensure `.env` allows CORS from the local frontend dev server:
+
+```env
+# In .env
+WORKFLOW_DISPATCHER_FRONTEND_ORIGINS=http://localhost:3000
+```
+
+Ensure `web/.env` points to the local backend server:
+
+```env
+# In web/.env
+VITE_API_BASE_URL=http://localhost:8000
+VITE_BASE_PATH=/
+```
+
+#### Starting the Backend
 
 ```bash
 make install
 make run
-
-cd web && npm ci && npm run dev
 ```
 
-The API listens on <http://localhost:8000> (`/docs` for OpenAPI). The UI listens on <http://localhost:3000>.
+The backend server starts on <http://localhost:8000>.
 
-| Target | Description |
+#### Starting the Frontend
+
+In a separate terminal:
+
+```bash
+cd web
+npm ci
+npm run dev
+```
+
+The frontend server starts on <http://localhost:3000>.
+
+## Development and Testing
+
+### Backend Commands
+
+| Command | Action |
 |---|---|
-| `make install` | Install Python dependencies |
-| `make run` | Start the API on port 8000 |
-| `make lint` | `poetry check`, `ruff`, and `mypy` |
-| `make test` | Run the test suite |
-| `make build` | Build the API Docker image |
+| `make install` | Install Python dependencies via Poetry |
+| `make run` | Start the FastAPI backend on port 8000 |
+| `make lint` | Run `poetry check`, `ruff`, and `mypy` |
+| `make format` | Format code using `ruff format` and `ruff check --fix` |
+| `make test` | Run all pytest test suites |
+| `make test-unit` | Run unit tests only (`tests/unit`) |
+| `make test-integration` | Run integration tests only (`tests/integration`) |
+| `make test-coverage` | Run tests with coverage reports (XML and terminal) |
+| `make build` | Build the API Docker image locally |
 
-## Docker
+### Frontend Commands
 
-API image (port 8000, health check on `GET /health`, database volume at `/var/databases`):
+From the `web/` directory:
 
-```bash
-make build
-docker run --env-file .env -p 8000:8000 github-workflow-dispatcher:latest
-```
+| Command | Action |
+|---|---|
+| `npm run dev` | Start the Vite development server on port 3000 |
+| `npm run build` | Type-check and compile the production build into `dist/` |
+| `npm run lint` | Lint frontend code using `oxlint` |
+| `npm test` | Run frontend tests with `vitest` |
+| `npm run preview` | Preview production build locally |
 
-Web image (nginx on port 80):
+## API Documentation
 
-```bash
-docker build -t github-workflow-dispatcher-web:latest \
-  --build-arg VITE_API_BASE_URL=http://localhost:8000 \
-  web
-docker run -p 3000:80 github-workflow-dispatcher-web:latest
-```
+When the backend is running, API specifications are accessible at:
 
-## CI
+- Swagger UI: <http://localhost:8000/docs> (or port 8001 under Docker Compose)
+- ReDoc: <http://localhost:8000/redoc> (or port 8001 under Docker Compose)
+- Health Check: `GET http://localhost:8000/health`
 
-Push to `main`, version tags (`v*.*.*`), and pull requests run two workflows:
+## CI/CD and Container Registry
 
-- `.github/workflows/api.yml` — lint, unit tests, integration tests, then a Docker build. Pushes `ghcr.io/<owner>/github-workflow-dispatcher` on non-PR events. Ignores `web/**`.
-- `.github/workflows/web.yml` — lint, test, and build, then a Docker build. Pushes `ghcr.io/<owner>/github-workflow-dispatcher-web` on non-PR events. Runs only when `web/**` changes.
+GitHub Actions workflows run on pushes to `main`, tags matching `v*.*.*`, and pull requests:
 
-Images are tagged `latest` on the default branch, short SHA, and semver.
-
-## Built with IBM Bob
-
-IBM Bob built this repository:
-
-- Backend layers in `app/core`, `app/infra`, `app/plugins/github`, and `app/runner`
-- React UI in `web/`, including schedules, workflows, repositories, logs, and the dashboard
-- Both Docker images and the `api.yml` and `web.yml` workflows
+- `.github/workflows/api.yml`: Lints and tests backend code, builds the container, and publishes `ghcr.io/datogoglidze/github-workflow-dispatcher`.
+- `.github/workflows/web.yml`: Lints, tests, and builds frontend code, then builds and publishes `ghcr.io/datogoglidze/github-workflow-dispatcher-web`.
