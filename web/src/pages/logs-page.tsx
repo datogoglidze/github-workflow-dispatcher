@@ -116,7 +116,6 @@ export function LogsPage() {
     <div className="space-y-4">
       <h1 className="text-lg font-semibold">Dispatch Logs</h1>
       <DataTableCard
-        title="Dispatch Logs"
         activeFilters={columnFilters.activeCount}
         onClear={columnFilters.clear}
       >

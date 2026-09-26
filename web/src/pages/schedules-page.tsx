@@ -169,7 +169,6 @@ export function SchedulesPage() {
         </Button>
       </div>
       <DataTableCard
-        title="Schedules"
         activeFilters={columnFilters.activeCount}
         onClear={columnFilters.clear}
       >

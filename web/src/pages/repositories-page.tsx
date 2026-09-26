@@ -8,7 +8,6 @@ import { Pagination } from "@/components/data-table/pagination"
 import { SortableHeader } from "@/components/data-table/sortable-header"
 import { TableSkeleton } from "@/components/data-table/table-skeleton"
 import { ExternalAnchor } from "@/components/external-anchor"
-import { SyncReposButton } from "@/components/sync-repos-button"
 import {
   Table,
   TableBody,
@@ -37,7 +36,7 @@ const columns = [
 ]
 
 export function RepositoriesPage() {
-  const { refreshKey, syncing, syncAndRefresh } = useAppOutlet()
+  const { refreshKey } = useAppOutlet()
   const columnFilters = useColumnFilters(filters)
   const { sort, toggle } = useSort("full_name")
   const { pageSize, setPageSize, page, setPage, limit, offset } = usePagination()
@@ -65,15 +64,9 @@ export function RepositoriesPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-lg font-semibold">Connected Repositories</h1>
-        <SyncReposButton
-          label="Sync Repositories"
-          syncing={syncing}
-          onSync={syncAndRefresh}
-        />
+        <h1 className="text-lg font-semibold">Repositories</h1>
       </div>
       <DataTableCard
-        title="Repositories"
         activeFilters={columnFilters.activeCount}
         onClear={columnFilters.clear}
       >
