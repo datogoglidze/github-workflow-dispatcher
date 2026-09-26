@@ -80,8 +80,6 @@ export function WorkflowSelect({
     [loading, accumulated.length, data?.total],
   )
 
-  const total = data?.total ?? 0
-
   return (
     <Popover open={disabled ? false : open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
