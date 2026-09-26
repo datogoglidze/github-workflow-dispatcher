@@ -76,9 +76,13 @@ async def list_workflows(
     )
     total = workflows_service.count(**parsed)
 
-    # Batch-load repositories
+    # Batch-load only the repositories referenced by this page
     repo_ids = {w.repo_id for w in workflows}
-    repos = repositories_service.read_many(limit=None) if repo_ids else []
+    repos = (
+        repositories_service.read_many(limit=None, id__in=list(repo_ids))
+        if repo_ids
+        else []
+    )
     repo_map = {r.id: r for r in repos}
 
     return ResourceFound(
