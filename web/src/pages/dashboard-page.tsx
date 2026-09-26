@@ -6,7 +6,7 @@ import { listRepositories } from "@/api/repositories"
 import { listSchedules } from "@/api/schedules"
 import type { DispatchLog, Schedule } from "@/api/types"
 import { listWorkflows } from "@/api/workflows"
-import { StatusCodeBadge } from "@/components/badges"
+
 import { CronBadge } from "@/components/cron-badge"
 import { TableSkeleton } from "@/components/data-table/table-skeleton"
 import { ExternalAnchor } from "@/components/external-anchor"
@@ -242,7 +242,9 @@ export function DashboardPage() {
                           onClick={() => setSelectedLog(log)}
                         >
                           <TableCell>
-                            <StatusCodeBadge code={log.status_code} />
+                            <span className={log.status_code === 200 || log.status_code === 204 ? "font-medium text-emerald-600 dark:text-emerald-500" : log.status_code == null ? "font-medium text-muted-foreground" : "font-medium text-destructive"}>
+                              {log.status_code === 200 || log.status_code === 204 ? "OK" : log.status_code == null ? "Pending" : "FAIL"}
+                            </span>
                           </TableCell>
                           <TableCell>
                             <RelativeTime value={log.triggered_at} />
@@ -264,7 +266,7 @@ export function DashboardPage() {
                                 className="text-primary hover:underline"
                                 onClick={(event) => event.stopPropagation()}
                               >
-                                Run
+                                View run
                               </a>
                             ) : (
                               "—"

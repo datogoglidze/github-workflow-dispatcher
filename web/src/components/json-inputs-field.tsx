@@ -30,11 +30,13 @@ export function JsonInputsField({
   value,
   onChange,
   disabled,
+  className,
 }: {
   id: string
   value: string
   onChange: (value: string) => void
   disabled?: boolean
+  className?: string
 }) {
   const parsed = parseInputs(value)
 
@@ -44,7 +46,7 @@ export function JsonInputsField({
   }
 
   return (
-    <div className="space-y-1.5">
+    <div className={className || "space-y-1.5"}>
       <div className="flex items-center justify-between gap-2">
         <Label htmlFor={id}>Inputs</Label>
         <Button
