@@ -1,11 +1,11 @@
+import { useState } from "react"
 import {
   ChevronLeft,
   ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   MoreHorizontal,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -30,11 +30,22 @@ export function Pagination({
   pageSize: number
   onPageSize: (size: number) => void
 }) {
+  const [jumpPage, setJumpPage] = useState("")
   const offset = page * pageSize
   const from = total === 0 ? 0 : offset + 1
   const to = total === 0 ? 0 : Math.min(offset + count, total)
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
   const current = page + 1
+
+  const handleJump = (e: React.FormEvent) => {
+    e.preventDefault()
+    const pageNum = parseInt(jumpPage, 10)
+    if (!isNaN(pageNum)) {
+      const validPage = Math.max(1, Math.min(pageNum, totalPages))
+      onPage(validPage - 1)
+      setJumpPage("")
+    }
+  }
 
   function getPageNumbers() {
     if (totalPages <= 7) {
@@ -82,16 +93,6 @@ export function Pagination({
             type="button"
             variant="outline"
             size="icon-sm"
-            onClick={() => onPage(0)}
-            disabled={page === 0}
-            aria-label="First page"
-          >
-            <ChevronsLeft className="size-3.5" />
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-sm"
             onClick={() => onPage(page - 1)}
             disabled={page === 0}
             aria-label="Previous page"
@@ -134,16 +135,21 @@ export function Pagination({
           >
             <ChevronRight className="size-3.5" />
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-sm"
-            onClick={() => onPage(totalPages - 1)}
-            disabled={page >= totalPages - 1}
-            aria-label="Last page"
-          >
-            <ChevronsRight className="size-3.5" />
-          </Button>
+
+          {totalPages > 7 && (
+            <form onSubmit={handleJump} className="ml-2 flex items-center gap-1.5">
+              <span className="sr-only">Go to page:</span>
+              <Input
+                className="h-7 w-14 text-center text-xs [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                type="number"
+                min={1}
+                max={totalPages}
+                placeholder="Page"
+                value={jumpPage}
+                onChange={(e) => setJumpPage(e.target.value)}
+              />
+            </form>
+          )}
         </div>
       </div>
     </div>
