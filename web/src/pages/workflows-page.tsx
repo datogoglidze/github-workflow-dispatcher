@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useSearchParams } from "react-router-dom"
 import type { Workflow } from "@/api/types"
 import { listWorkflows } from "@/api/workflows"
+import { readFiltersFromParams } from "@/lib/filters"
 import { WorkflowStateBadge } from "@/components/badges"
 import { ColumnFilterRow } from "@/components/data-table/column-filter-row"
 import { DataTableCard } from "@/components/data-table/data-table-card"
@@ -28,6 +29,7 @@ import { useSort } from "@/hooks/use-sort"
 const filterColumns = [
   { key: "name", type: "text" as const },
   { key: "repository.full_name", type: "text" as const },
+  { key: "state", type: "text" as const },
 ]
 
 const columns = [
@@ -39,24 +41,13 @@ const columns = [
     filter: "text" as const,
     filterKey: "repository.full_name",
   },
-  { id: "state", label: "State", sortField: "state" },
+  { id: "state", label: "State", sortField: "state", filter: "text" as const, filterKey: "state" },
   { id: "actions", label: "Actions" },
 ]
 
-function initialRepositoryFilter(params: URLSearchParams) {
-  const exact = params.get("repository.full_name[eq]")
-  if (exact) return exact
-  return params.get("repository.full_name[ilike]")?.replace(/^%|%$/g, "") ?? ""
-}
-
 export function WorkflowsPage() {
   const [searchParams] = useSearchParams()
-  const [initialFilters] = useState<Record<string, string>>(() => {
-    const repository = initialRepositoryFilter(searchParams)
-    const filters: Record<string, string> = {}
-    if (repository) filters["repository.full_name"] = repository
-    return filters
-  })
+  const [initialFilters] = useState<Record<string, string>>(() => readFiltersFromParams(filterColumns, searchParams))
   const { refreshKey } = useAppOutlet()
   const columnFilters = useColumnFilters(filterColumns, initialFilters)
   const { sort, toggle } = useSort("name")

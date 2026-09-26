@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import { deleteSchedule, listSchedules, updateSchedule } from "@/api/schedules"
 import type { Schedule } from "@/api/types"
+import { readFiltersFromParams } from "@/lib/filters"
 import { CronBadge } from "@/components/cron-badge"
 import { ColumnFilterRow } from "@/components/data-table/column-filter-row"
 import { DataTableCard } from "@/components/data-table/data-table-card"
@@ -43,6 +44,8 @@ const filterColumns = [
   { key: "is_enabled", type: "boolean" as const },
   { key: "workflow.name", type: "text" as const },
   { key: "workflow.repository.full_name", type: "text" as const },
+  { key: "last_run_at", type: "date" as const },
+  { key: "next_run_at", type: "date" as const },
 ]
 
 const columns = [
@@ -69,28 +72,15 @@ const columns = [
   },
   { id: "cron", label: "Cron", sortField: "cron_expression" },
   { id: "ref", label: "Git Ref", sortField: "ref" },
-  { id: "last_run", label: "Last Run", sortField: "last_run_at" },
-  { id: "next_run", label: "Next Run", sortField: "next_run_at" },
+  { id: "last_run", label: "Last Run", sortField: "last_run_at", filter: "date" as const, filterKey: "last_run_at" },
+  { id: "next_run", label: "Next Run", sortField: "next_run_at", filter: "date" as const, filterKey: "next_run_at" },
   { id: "inputs", label: "Inputs" },
   { id: "actions", label: "Actions" },
 ]
 
-function readFilter(params: URLSearchParams, key: string) {
-  const exact = params.get(`${key}[eq]`)
-  if (exact != null && exact !== "") return exact
-  return params.get(`${key}[ilike]`)?.replace(/^%|%$/g, "") ?? ""
-}
-
 export function SchedulesPage() {
   const [searchParams] = useSearchParams()
-  const [initialFilters] = useState<Record<string, string>>(() => {
-    const filters: Record<string, string> = {}
-    for (const column of filterColumns) {
-      const value = readFilter(searchParams, column.key)
-      if (value) filters[column.key] = value
-    }
-    return filters
-  })
+  const [initialFilters] = useState<Record<string, string>>(() => readFiltersFromParams(filterColumns, searchParams))
   const { refreshKey } = useAppOutlet()
   const columnFilters = useColumnFilters(filterColumns, initialFilters)
   const { sort, toggle } = useSort("next_run_at")

@@ -1,6 +1,7 @@
 import { useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useSearchParams } from "react-router-dom"
 import { listRepositories } from "@/api/repositories"
+import { readFiltersFromParams } from "@/lib/filters"
 import { ActiveBadge } from "@/components/badges"
 import { ColumnFilterRow } from "@/components/data-table/column-filter-row"
 import { DataTableCard } from "@/components/data-table/data-table-card"
@@ -25,19 +26,23 @@ import { formatDate, formatRelativeTime } from "@/lib/utils"
 const filters = [
   { key: "full_name", type: "text" as const },
   { key: "is_active", type: "boolean" as const },
+  { key: "default_branch", type: "text" as const },
+  { key: "last_synced_at", type: "date" as const },
 ]
 
 const columns = [
   { id: "full_name", label: "Title", sortField: "full_name", filter: "text" as const },
-  { id: "default_branch", label: "Default Branch", sortField: "default_branch" },
+  { id: "default_branch", label: "Default Branch", sortField: "default_branch", filter: "text" as const, filterKey: "default_branch" },
   { id: "is_active", label: "Status", sortField: "is_active", filter: "boolean" as const },
-  { id: "last_synced_at", label: "Last Synced", sortField: "last_synced_at" },
+  { id: "last_synced_at", label: "Last Synced", sortField: "last_synced_at", filter: "date" as const, filterKey: "last_synced_at" },
   { id: "workflows", label: "" },
 ]
 
 export function RepositoriesPage() {
+  const [searchParams] = useSearchParams()
+  const [initialFilters] = useState<Record<string, string>>(() => readFiltersFromParams(filters, searchParams))
   const { refreshKey } = useAppOutlet()
-  const columnFilters = useColumnFilters(filters)
+  const columnFilters = useColumnFilters(filters, initialFilters)
   const { sort, toggle } = useSort("full_name")
   const { pageSize, setPageSize, page, setPage, limit, offset } = usePagination()
   const filterKey = JSON.stringify(columnFilters.params)
