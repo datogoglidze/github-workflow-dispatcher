@@ -1,0 +1,23 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./:/var/databases
+    environment:
+      - WORKFLOW_DISPATCHER_DATABASE_URL=sqlite:////var/databases/github_workflow_dispatcher.sqlite
+    env_file:
+      - .env
+
+  frontend:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: "http://localhost:8001"
+        VITE_BASE_PATH: "/"
+    ports:
+      - "8002:80"

@@ -1,4 +1,4 @@
-.PHONY: help install lock update format lint test test-unit test-integration test-coverage run build
+.PHONY: help install lock update format lint test test-unit test-integration test-coverage run build up down
 
 help:
 	poetry run python -m app.runner --help
@@ -40,3 +40,9 @@ run:
 
 build:
 	docker build -t github-workflow-dispatcher:latest --build-arg RELEASE=$$(git rev-parse --short HEAD) .
+
+up:
+	docker compose up -d --build
+
+down:
+	docker compose down
