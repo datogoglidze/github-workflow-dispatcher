@@ -1,6 +1,11 @@
 import { useState } from "react"
-import { Link } from "react-router-dom"
-import { Play } from "lucide-react"
+import {
+  CalendarClock,
+  FolderGit2,
+  Play,
+  ScrollText,
+  Workflow,
+} from "lucide-react"
 import { listLogs } from "@/api/logs"
 import { listRepositories } from "@/api/repositories"
 import { listSchedules } from "@/api/schedules"
@@ -8,6 +13,7 @@ import type { DispatchLog, Schedule } from "@/api/types"
 import { listWorkflows } from "@/api/workflows"
 
 import { CronBadge } from "@/components/cron-badge"
+import { MetricCard } from "@/components/dashboard-metric-card"
 import { TableSkeleton } from "@/components/data-table/table-skeleton"
 import { ExternalAnchor } from "@/components/external-anchor"
 import { LogDetailsDrawer } from "@/components/log-details-drawer"
@@ -15,8 +21,7 @@ import { RelativeTime } from "@/components/relative-time"
 import { ScheduleModal } from "@/components/schedule-modal"
 import { TriggerScheduleModal } from "@/components/trigger-schedule-modal"
 import { Button } from "@/components/ui/button"
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
   TableBody,
@@ -27,31 +32,6 @@ import {
 } from "@/components/ui/table"
 import { useAppOutlet } from "@/hooks/use-app-outlet"
 import { useFetch } from "@/hooks/use-fetch"
-
-function MetricCard({
-  title,
-  to,
-  total,
-  loading,
-}: {
-  title: string
-  to: string
-  total: number | undefined
-  loading: boolean
-}) {
-  return (
-    <Link to={to} className="block rounded-xl focus-visible:ring-3 focus-visible:ring-ring/50">
-      <Card size="sm" className="h-full hover:bg-muted/40">
-        <CardHeader>
-          <CardDescription>{title}</CardDescription>
-          <CardTitle className="text-2xl tabular-nums">
-            {loading && total == null ? <Skeleton className="h-8 w-12" /> : (total ?? 0)}
-          </CardTitle>
-        </CardHeader>
-      </Card>
-    </Link>
-  )
-}
 
 function WorkflowRepo({
   name,
@@ -117,26 +97,30 @@ export function DashboardPage() {
         <MetricCard
           title="Total Schedules"
           to="/schedules"
-          total={schedules.data?.total}
+          value={schedules.data?.total}
           loading={schedules.loading}
+          icon={CalendarClock}
         />
         <MetricCard
           title="Dispatchable Workflows"
           to="/workflows"
-          total={workflows.data?.total}
+          value={workflows.data?.total}
           loading={workflows.loading}
+          icon={Workflow}
         />
         <MetricCard
           title="Connected Repos"
           to="/repositories"
-          total={repositories.data?.total}
+          value={repositories.data?.total}
           loading={repositories.loading}
+          icon={FolderGit2}
         />
         <MetricCard
           title="Execution Logs"
           to="/logs"
-          total={logsTotal.data?.total}
+          value={logsTotal.data?.total}
           loading={logsTotal.loading}
+          icon={ScrollText}
         />
       </div>
 
