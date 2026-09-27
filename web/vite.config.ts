@@ -13,8 +13,9 @@ function normalizeBase(value: string | undefined): string {
 }
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, rootDir, "VITE_")
+  const env = loadEnv(mode, rootDir, ["VITE_", "FAKE"])
   return {
+    envPrefix: ["VITE_", "FAKE"],
     base: normalizeBase(env.VITE_BASE_PATH),
     plugins: [react(), tailwindcss()],
     resolve: {
