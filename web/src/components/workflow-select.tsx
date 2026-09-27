@@ -81,7 +81,7 @@ export function WorkflowSelect({
   )
 
   return (
-    <Popover open={disabled ? false : open} onOpenChange={setOpen}>
+    <Popover modal={true} open={disabled ? false : open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -111,7 +111,10 @@ export function WorkflowSelect({
         />
         {error ? <p className="text-xs text-destructive mb-2 px-1">{error.message}</p> : null}
         
-        <div className="max-h-64 space-y-1 overflow-y-auto px-1">
+        <div
+          className="max-h-64 space-y-1 overflow-y-auto overscroll-contain px-1"
+          onWheel={(event) => event.stopPropagation()}
+        >
           {accumulated.length === 0 && !loading && !error ? (
             <p className="text-xs text-muted-foreground py-2 text-center">No workflows found</p>
           ) : (

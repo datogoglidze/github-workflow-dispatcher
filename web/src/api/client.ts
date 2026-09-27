@@ -13,6 +13,14 @@ type ErrorBody = {
   detail?: unknown
 }
 
+import { handleMockRequest } from "@/api/mock/handler"
+
+export const isFakeMode =
+  import.meta.env.FAKE === "true" ||
+  import.meta.env.FAKE === "1" ||
+  import.meta.env.VITE_FAKE === "true" ||
+  import.meta.env.VITE_FAKE === "1"
+
 let rawBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
 
 if (typeof window !== "undefined" && rawBaseUrl.startsWith("http")) {
@@ -77,6 +85,10 @@ export function buildQueryString(params: QueryParams): string {
 }
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  if (isFakeMode) {
+    return handleMockRequest<T>(path, init)
+  }
+
   const headers = new Headers(init?.headers)
   if (!headers.has("Accept")) headers.set("Accept", "application/json")
   if (init?.body != null && !headers.has("Content-Type")) {
