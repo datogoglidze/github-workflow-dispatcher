@@ -139,7 +139,7 @@ docker run -d \
   --network dispatcher-net \
   --env-file .env \
   -e WORKFLOW_DISPATCHER_DATABASE_URL=sqlite:////var/databases/github_workflow_dispatcher.sqlite \
-  -v "$(pwd)/data:/var/databases" \
+  -v workflow-dispatcher-data:/var/databases \
   -p 8001:8000 \
   ghcr.io/datogoglidze/github-workflow-dispatcher:latest
 ```
@@ -164,7 +164,7 @@ services:
     ports:
       - "8001:8000"
     volumes:
-      - ./:/var/databases
+      - workflow-dispatcher-data:/var/databases
     environment:
       - WORKFLOW_DISPATCHER_DATABASE_URL=sqlite:////var/databases/github_workflow_dispatcher.sqlite
     env_file:
@@ -174,6 +174,9 @@ services:
     image: ghcr.io/datogoglidze/github-workflow-dispatcher-web:latest
     ports:
       - "8002:80"
+
+volumes:
+  workflow-dispatcher-data:
 ```
 
 Start the containers:
