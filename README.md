@@ -10,7 +10,7 @@ A GitHub Actions workflow scheduler and on-demand dispatcher. The system synchro
   - [Backend Configuration](#backend-configuration)
   - [Frontend Configuration](#frontend-configuration)
 - [Running the Project](#running-the-project)
-  - [1. Docker Compose (Local Build)](#1-docker-compose-local-build)
+  - [1. Docker Compose](#1-docker-compose)
   - [2. Prebuilt Docker Packages (GHCR)](#2-prebuilt-docker-packages-ghcr)
   - [3. Local Development (make run and npm run dev)](#3-local-development-make-run-and-npm-run-dev)
 - [Development and Testing](#development-and-testing)
@@ -88,7 +88,7 @@ Configured in `web/.env`:
 
 > **Note:** All terminal commands throughout this guide assume a Bash shell (e.g. **Git Bash** on Windows, or standard terminal on Linux/macOS).
 
-### 1. Docker Compose (Local Build)
+### 1. Docker Compose
 
 Build and start both the backend API and frontend UI using the included `docker-compose.yml`:
 
@@ -101,7 +101,7 @@ docker compose up -d --build
 
 - **Backend API**: <http://localhost:8001> (OpenAPI documentation at <http://localhost:8001/docs>)
 - **Web UI**: <http://localhost:8002>
-- **Data Persistence**: SQLite database is stored locally as `github_workflow_dispatcher.sqlite` via volume mount `./:/var/databases`.
+- **Data Persistence**: SQLite database is stored in the Docker named volume `workflow-dispatcher-data` mounted at `/var/databases`.
 
 To view container logs:
 
@@ -140,7 +140,7 @@ docker run -d \
   --env-file .env \
   -e WORKFLOW_DISPATCHER_DATABASE_URL=sqlite:////var/databases/github_workflow_dispatcher.sqlite \
   -v workflow-dispatcher-data:/var/databases \
-  -p 8001:8000 \
+  -p 8000:8000 \
   ghcr.io/datogoglidze/github-workflow-dispatcher:latest
 ```
 
@@ -153,16 +153,18 @@ docker run -d \
   ghcr.io/datogoglidze/github-workflow-dispatcher-web:latest
 ```
 
+> **Note:** The pre-built frontend image connects to the backend API on port `8000`. Therefore, the backend must be mapped to host port `8000` (`-p 8000:8000`). Data is persisted in the Docker named volume `workflow-dispatcher-data`, which works cross-platform across Linux and Windows without permission conflicts.
+
 #### Option B: Running with Docker Compose using Published Images
 
-Create a compose file (e.g., `docker-compose.ghcr.yml` or edit `docker-compose.yml`) referencing the published images:
+Create a compose file (e.g., `docker-compose.ghcr.yml`) referencing the published images:
 
 ```yaml
 services:
   backend:
     image: ghcr.io/datogoglidze/github-workflow-dispatcher:latest
     ports:
-      - "8001:8000"
+      - "8000:8000"
     volumes:
       - workflow-dispatcher-data:/var/databases
     environment:
