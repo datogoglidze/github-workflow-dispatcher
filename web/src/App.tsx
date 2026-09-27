@@ -3,6 +3,7 @@ import { Layout } from "@/components/layout/layout"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { AboutPage } from "@/pages/about-page"
 import { DashboardPage } from "@/pages/dashboard-page"
 import { LogsPage } from "@/pages/logs-page"
 import { RepositoriesPage } from "@/pages/repositories-page"
@@ -20,6 +21,7 @@ export default function App() {
             <Route path="workflows" element={<WorkflowsPage />} />
             <Route path="repositories" element={<RepositoriesPage />} />
             <Route path="logs" element={<LogsPage />} />
+            <Route path="about" element={<AboutPage />} />
           </Route>
         </Routes>
         <Toaster position="bottom-right" />

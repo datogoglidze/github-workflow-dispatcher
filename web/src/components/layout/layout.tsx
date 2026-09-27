@@ -43,7 +43,7 @@ export function Layout() {
   }
 
   return (
-    <div className="flex min-h-svh flex-col">
+    <div className="flex h-svh flex-col overflow-hidden">
       <header className="flex h-14 shrink-0 items-center gap-2 border-b px-3">
         <Button
           type="button"
@@ -64,16 +64,16 @@ export function Layout() {
           <ModeToggle />
         </div>
       </header>
-      <div className="flex min-h-0 flex-1">
-        <aside className="hidden w-60 shrink-0 border-r md:block">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <aside className="hidden w-60 shrink-0 overflow-y-auto border-r md:flex md:flex-col">
           <SidebarNav />
         </aside>
-        <main className="min-w-0 flex-1 overflow-auto p-4">
+        <main className="min-w-0 flex-1 overflow-y-auto p-4">
           <Outlet context={outletContext} />
         </main>
       </div>
       <Sheet open={navOpen} onOpenChange={setNavOpen}>
-        <SheetContent side="left" className="w-60">
+        <SheetContent side="left" className="flex flex-col w-60">
           <SheetHeader>
             <SheetTitle>Workflow Dispatcher</SheetTitle>
           </SheetHeader>
